@@ -35,4 +35,4 @@ class Teledyne_Lecroy_T3AFG30(VisaInstrument):
         
 if __name__ == '__main__':
     myT3AFG30 = Teledyne_Lecroy_T3AFG30()
-    print('test')
+    print('test2')
