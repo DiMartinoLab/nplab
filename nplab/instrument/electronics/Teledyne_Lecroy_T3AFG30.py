@@ -10,6 +10,7 @@ Class for Teledyne Lecroy T3AFG30 arbitrary function generator.
 """
 
 from nplab.instrument.visa_instrument import VisaInstrument
+import binascii
 #import numpy as np
 
 
@@ -32,6 +33,9 @@ class Teledyne_Lecroy_T3AFG30(VisaInstrument):
         :state: 'ON' or 'OFF'
         """
         self.write(channel + ':OUTP ' + state)
+        
+    def create_wave_file():
+        return
         
 if __name__ == '__main__':
     myT3AFG30 = Teledyne_Lecroy_T3AFG30()
