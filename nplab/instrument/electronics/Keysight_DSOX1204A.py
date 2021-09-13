@@ -9,14 +9,11 @@ Created on Mon Sep  6 15:13:41 2021
 Class for Keysight DSOX1204A digital oscilloscope.
 """
 
+"""import modules"""
 from nplab.instrument.visa_instrument import VisaInstrument
-import sys
-from comtypes.client import GetModule
-from comtypes.client import CreateObject
-#if not hasattr(sys, "frozen"):
-#    GetModule("C:\Program Files (x86)\IVI Foundation\VISA\VisaCom\GlobMgr.dll")
-import comtypes.gen.VisaComLib as VisaComLib
-#import numpy as np
+import pyvisa
+import numpy as np
+import struct
 
 
 class Keysight_DSOX1204A(VisaInstrument):
@@ -25,10 +22,9 @@ class Keysight_DSOX1204A(VisaInstrument):
         super(Keysight_DSOX1204A, self).__init__(address)
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
-        self.clear()
-        self.reset()
+       # self.clear()
+        self.reset() 
         
-
     def reset(self):
         """Reset the instrument to its default state."""
         self.write('*RST')
@@ -46,8 +42,12 @@ class Keysight_DSOX1204A(VisaInstrument):
             self.write(':CHANnel{}:DISPlay 0'.format(item))
             
             
-    def trigger(self,trigger_pattern):
-        self.write(':TRIGger:PATTern {}'.format(trigger_pattern)) # command is :TRIGger:PATTern <pattern>
+    def trigger_source(self):
+        self.write(':TRIGger:EDGE:SOURce CHANnel1') # command is :TRIGger:PATTern <pattern>
+        
+        
+    def trigger_edge(self):
+        self.write(':TRIGger:MODE EDGE')
             
     def autoscale(self):
         self.write(':AUToscale') #The :AUToscale command evaluates all input signals and sets the correct
@@ -59,65 +59,99 @@ class Keysight_DSOX1204A(VisaInstrument):
     def acquire_mode(self,set_mode):
         self.write(':ACQuire:MODE {}'.format(set_mode)) # other options are segmented. Option selected is RealTime
         
-        
-#The :DIGitize command is a specialized RUN command. It causes the instrument
-#to acquire waveforms according to the settings of the :ACQuire commands
-#subsystem. When the acquisition is complete, the instrument is stopped.        
-    def digitize(self,channel_numbers_on):
+                
+    def set_vertical_scale(self,vertical_scale_value):
+        self.write(':CHANnel1:SCALe {}'.format(vertical_scale_value))
+    
+    def digitize(self,channel_numbers_on):  #specialized RUN command
         for items in channel_numbers_on:
             self.write(':DIGitize CHANnel{}'.format(items))
             
-#            
-#    def single_run(self):
-#        self.write(':SINGle')  #The :SINGle command causes the instrument to acquire a single trigger of data.
-        
+            
+    def single_run(self):
+        self.write(':SINGle')  #The :SINGle command causes the instrument to acquire a single trigger of data.
+    
     def run(self):
         self.write(':RUN') #The :RUN command starts repetitive acquisitions
         
-#    def stop(self):
-#        self.write(':STOP') #The :STOP command stops the acquisition.
-        
-    def do_query_string(query):
-        myScope.WriteString("%s" % query, True)
-        result = myScope.ReadString()
-       # check_instrument_errors(query)
-        return result
+    def stop(self):
+        self.write(':STOP') #The :STOP command stops the acquisition.
         
         
-    def waveform_source(self):
-        self.write(':WAVeform:SOURce CHANnel1')  
         
-
-
-    def download_waveform(self):
+    def waveform_mode(self): # sets waveform mode
         self.write(':WAVeform:POINts:MODE RAW')
-
-          
+    
+    def set_waveform_points(self): # sets number of points
+        self.write(':WAVeform:POINts 18000')
+        
+    def waveform_source(self,waveform_channel_source):
+        self.write(':WAVeform:SOURce CHANnel{}'.format(waveform_channel_source))
+        
+        
+    def waveform_data_format(self,data_format):
+        self.write(':WAVeform:FORMat {}'.format(data_format))
+        
+    def read_waveform_data(self):
+        """stuff"""
+        #self.query_binary_values('WAV:DATA?', datatype='s')                  
+        self.parsed_query('WAV:DATA?', datatype='s')                  
         
 if __name__ == '__main__':
     
-    rm = CreateObject("VISA.GlobalRM", \
-                      interface=VisaComLib.IResourceManager)
-    myScope = CreateObject("VISA.BasicFormattedIO", \
-                           interface=VisaComLib.IFormattedIO488)
-    myScope.IO = \
-    rm.Open("TCPIP0::141.121.237.208::hislip0::INSTR")
-    
-    
+    rm = pyvisa.ResourceManager() # call resource manager from module pyvisa
+    rm.list_resources() #lists all resources available in case one forgets the resoucrce address
+    myScope = rm.open_resource('USB0::0x2A8D::0x0386::CN60476268::0::INSTR') #opens oscilloscope
+    #myScope.timeout = 25000 #to set a timeout for the device operation
+
+     
     myDSOX1204A = Keysight_DSOX1204A()
-    myDSOX1204A.channel_display_on(['1','2'])
-    myDSOX1204A.channel_display_off(['3','4'])
+  # myDSOX1204A.autoscale() # optional, creates a time lag for other instructions to execute and throws error
+  # myDSOX1204A.channel_display_on(['1']) # channel 1 display alone is on
+    myDSOX1204A.trigger_source()
+    myDSOX1204A.trigger_edge()
+    myDSOX1204A.set_vertical_scale('20')
     myDSOX1204A.acquire_type('NORMal') # other options are 'AVERage','HRESolution','PEAK'
-    myDSOX1204A.acquire_mode('SEGMented') # other options are segmented. Option selected is RealTime
-    myDSOX1204A.digitize(['1'])
-    myDSOX1204A.save_waveform()
-   # myDSOX1204A.trigger('\"1\"[,CHANnel1,POSitive]')
-    myDSOX1204A.autoscale()
-    myDSOX1204A.download_waveform('50')
-    myDSOX1204A.download_waveform()
-    myDSOX1204A.do_query_string()
+    #myDSOX1204A.run()
+    hi = myDSOX1204A.single_run()
+    #myDSOX1204A.digitize(['1']) # digitized only channel 1.
+    myDSOX1204A.waveform_mode() # set waveform mode
+    myDSOX1204A.set_waveform_points()
+    myDSOX1204A.waveform_source(['1'])
+    myDSOX1204A.waveform_data_format('BYTE') # can be set to BYTE, WORD, ASCii
+   # myDSOX1204A.acquire_mode('RTIMe') # other options are segmented. Option selected is RealTime
+
+    values = myScope.query_binary_values('WAV:DATA?', datatype='s')
+    print(values)
+
+    x_increment = myDSOX1204A.write(":WAVeform:XINCrement?")[0]
+    x_origin = myDSOX1204A.write(":WAVeform:XORigin?")[0]
+    y_increment = myDSOX1204A.write(":WAVeform:YINCrement?")[0]
+    y_origin = myDSOX1204A.write(":WAVeform:YORigin?")[0]
+    y_reference = myDSOX1204A.write(":WAVeform:YREFerence?")[0]
+   
+    values2 = struct.unpack("%dB" % len(values[0]), values[0])
     
-    qresult = myDSOX1204A.do_query_string(":WAVeform:POINts:MODE?")
-    print("Waveform points mode: %s" % qresult)
+    f = open("waveform_data.csv", "w")
+    for i in range(0, len(values2) - 1):
+        time_val = x_origin + (i * x_increment)
+        voltage = ((values2[i] - y_reference) * y_increment) + y_origin
+        f.write("%E, %f\n" % (time_val, voltage))
+    f.close()
+
+    
+
+
+
+    
+
+
+
+    
+
+    
+
+    
+
     
     
