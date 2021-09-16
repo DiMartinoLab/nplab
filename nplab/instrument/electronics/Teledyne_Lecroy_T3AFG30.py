@@ -57,6 +57,9 @@ class Teledyne_Lecroy_T3AFG30(VisaInstrument):
         self.write(channel + ':ARWV NAME,' + func_name)
         'must match exactly, does not throw error if no stored waveform matches'
         
+        #TODO
+        #define util/output setup/polarity/invert function to flip arb wavesforms
+        
     def set_sync_signal(self, channel, state, src):
         """
         Turns on external sync signal based on channel or its modulation function

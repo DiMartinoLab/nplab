@@ -15,7 +15,7 @@ Class for Keysight DSOX1204A digital oscilloscope.
 from nplab.instrument.visa_instrument import VisaInstrument
 import pyvisa
 import struct
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
   
 
@@ -47,16 +47,52 @@ class Keysight_DSOX1204A(VisaInstrument):
             self.write(':CHANnel{}:DISPlay 0'.format(item))
             
             
-    def trigger_source(self):
-        self.write(':TRIGger:EDGE:SOURce CHANnel1') # command is :TRIGger:PATTern <pattern>
-        
+    def trigger_edge_source(self, source):
+        """
+        Sets source of trigger signal.
+        <source> 'CHAN<n>', 'EXT', 'LINE', 'WGEN', 'NONE'
+        <n> for channels 1-4
+        """
+        self.write(':TRIGger:EDGE:SOURce ' + source) # command is :TRIGger:PATTern <pattern>    
         
     def trigger_edge(self):
         self.write(':TRIGger:MODE EDGE')
         
     def trigger_edge_polarity(self):    
         self.write(":TRIGger:EDGE:SLOPe POSitive")
-            
+    
+    def trigger_sweep(self, sweep):
+        """
+        Sets trigger sweep--AUTO refreshes without trigger, NORMal waits for new trigger.
+        <sweep> 'AUTO' or 'NORMal'
+        """
+        self.write(':TRIGger:SWEep ' + sweep)
+        
+    def timebase_reference(self, reference):
+        """
+        Aligns time reference to 1 div left/right or in center of screen.
+        <reference> 'LEFT', 'CENTer', 'RIGHt'
+        """
+        self.write(':TIMebase:REFerence ' + reference)
+        
+    def timebase_range(self, rang):
+        """
+        Sets the full-scale horizontal time in seconds for the main window.
+        The range is 10 times the current time-per-division setting.
+        <rang> '<time for 10 div in sec>', i.e., '1e-3'
+        """
+        self.write(':TIMebase:RANGe ' + rang)
+        
+    def timebase_position(self, position):
+        """
+        Sets the time interval between the trigger event and the display reference point on the screen.
+        <position> '<NR3 format number>', i.e., '100E-06'
+        """
+        self.write(':TIMebase:POSition ' + position)
+        
+        #TODO
+        #set external trigger threshold voltage (2V)
+        
     def autoscale(self):
         self.write(':AUToscale') #The :AUToscale command evaluates all input signals and sets the correct
                                 #conditions to display the signals
@@ -112,7 +148,7 @@ if __name__ == '__main__':
     myDSOX1204A = Keysight_DSOX1204A()
   # myDSOX1204A.autoscale() # optional, creates a time lag for other instructions to execute and throws error
     myDSOX1204A.channel_display_on(['1']) # channel 1 display alone is on
-    myDSOX1204A.trigger_source()
+    myDSOX1204A.trigger_edge_source('EXT')
     myDSOX1204A.trigger_edge()
     myDSOX1204A.trigger_edge_polarity()
   #  myDSOX1204A.set_vertical_scale('20')
@@ -126,11 +162,11 @@ if __name__ == '__main__':
     myDSOX1204A.waveform_data_format() # can be set to BYTE, WORD, ASCii
     myDSOX1204A.acquire_mode('RTIMe') # other options are segmented. Option selected is RealTime
 
-    num_cycles = 2
+    num_cycles = 1
     values_all_cycles = np.array([])
     for cycles in range(num_cycles):    
         values_raw_binary = myScope.query_binary_values('WAV:DATA?', datatype='s')
-        values_unpacked = struct.unpack("%dB" % len(values_raw_binary[0]), values_raw_binary[0])
+        values_unpacked = struct.unpack("%dB" % len(values_raw_binary), values_raw_binary[0])
         values_all_cycles = np.append(values_all_cycles,values_unpacked)
         
     x_increment = myDSOX1204A.write(":WAVeform:XINCrement?")[0]
