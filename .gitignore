@@ -9,8 +9,8 @@ yacctab.py
 *.so
 
 # HDF5 data (test files)
-*.h5
-*.hdf5
+#*.h5
+#*.hdf5
 
 # Distribution / packaging
 .Python

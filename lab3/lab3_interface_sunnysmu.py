@@ -31,6 +31,7 @@ from nplab.utils.gui import QtCore, QtGui, uic, get_qt_app
 from nplab.ui.ui_tools import UiTools
 #import Rotation_Stage as RS
 #import visa
+import os
 import time
 import threading
 import numpy as np
@@ -74,12 +75,12 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         uic.loadUi('lab3_interface_sunny.ui', self)
         
 ###comment out software you are not going to use
-#       self.initialise_smu() #Keithley, for electrical measurements
-#        self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
-#        self.initialise_SMC100() #actuators for xy stage
-        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
+#        self.initialise_smu() #Keithley, for electrical measurements
+        self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
+        self.initialise_SMC100() #actuators for xy stage
+#        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
 #        self.initialise_Shamdor() #Andor, for Raman and 633nm laser 
-#       self.initialise_shutter() #control box
+        self.initialise_shutter() #control box
 ####end        
         self.radiantvoltages=None
 
