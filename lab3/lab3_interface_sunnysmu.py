@@ -17,7 +17,7 @@ import nplab
 from nplab.instrument.spectrometer.shamdor import Shamdor
 from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
 from nplab.instrument.electronics.keithley_2636b_smu import Keithley2636B as Keithley
-#from nplab.instrument.stage.smaract_mcs import SmaractMCSSerial
+from nplab.instrument.stage.smaract_mcs import SmaractMCSSerial
 from nplab.instrument.shutter.Arduino_ttl_shutter import Arduino_tri_shutter as shutter
 from nplab.instrument.light_sources.matchbox_laser import MatchboxLaser
 
@@ -503,7 +503,8 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 
 
 if __name__ == '__main__':
-    activeDatafile = nplab.current_datafile(working_directory = 'C:\\Users\\Lab Di Martino\\Documents')    
+    activeDatafile = nplab.current_datafile(working_directory = os.path.abspath(os.path.join(os.getcwd(),"../../..")))
+    #working directory should now be C:\\Users\\<name>\\Documents    
     gui_activeDatafile = activeDatafile.get_qt_ui()
     gui_activeDatafile.show()
     
