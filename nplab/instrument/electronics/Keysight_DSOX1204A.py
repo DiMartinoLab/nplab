@@ -17,9 +17,7 @@ import pyvisa
 import struct
 #import matplotlib.pyplot as plt
 import numpy as np
-  
-
-
+import time
 
 class Keysight_DSOX1204A(VisaInstrument):
     """Interface to the DSOX1204A oscilloscope."""
@@ -28,7 +26,13 @@ class Keysight_DSOX1204A(VisaInstrument):
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
        # self.clear()
-        self.reset() 
+       # self.reset()
+       # self.data_format('ASCII')
+       # self.set_waveform_points('2000')
+       # self.channel_attenuation_1x('1')
+       # self.channel_attenuation_1x('2')
+       # self.channel_attenuation_1x('3')
+       # self.channel_attenuation_1x('4')
         
     def reset(self):
         """Reset the instrument to its default state."""
@@ -38,18 +42,43 @@ class Keysight_DSOX1204A(VisaInstrument):
         """The *CLS common command clears the status data structures"""
         self.write('*CLS')
         
-    def channel_display_on(self,channel_numbers_on):
-        for item in channel_numbers_on:
+    def channel_display_on(self,channels):
+        """Turns on channels for display/capturing.
+        <channels> ['1'] or ['1','2'], i.e.
+        """
+        for item in channels:
             self.write(':CHANnel{}:DISPlay 1'.format(item))
             
-    def channel_display_off(self,channel_numbers_off):
-        for item in channel_numbers_off:
+    def channel_display_off(self,channels):
+        """Turns off channels for display/capturing.
+        <channels> ['1'] or ['1','2'], i.e.
+        """
+        for item in channels:
             self.write(':CHANnel{}:DISPlay 0'.format(item))
-            
+    
+    def channel_range(self, channel, vertical_range):
+        self.write('CHANnel' + channel + ':RANGe ' + vertical_range)   
+        
+    def channel_offset(self, channel, offset):
+        self.write('CHANnel' + channel + ':OFFSet ' + offset)
+        
+    def channel_attenuation_1x(self, channel):
+        self.write('CHANnel' + channel + ':PROBe 1')
+        
+    def channel_invert_toggle(self, channel):
+        #Note: this is for visual purposes only! Does not apply to raw values.
+        state = int(self.query(':CHANnel' + channel + ':INVert?'))
+        self.write(':CHANnel' + channel + ':INVert ' + str((state + 1) % 2))
+        
+    def channel_invert(self, channel, state):
+        #Note: this is for visual purposes only! Does not apply to raw values.
+        """
+        <state> 'ON' or 'OFF; '1' or '0'
+        """
+        self.write(':CHANnel' + channel + ':INVert ' + state)
             
     def trigger_edge_source(self, source):
-        """
-        Sets source of trigger signal.
+        """Sets source of trigger signal.
         <source> 'CHAN<n>', 'EXT', 'LINE', 'WGEN', 'NONE'
         <n> for channels 1-4
         """
@@ -67,6 +96,9 @@ class Keysight_DSOX1204A(VisaInstrument):
         <sweep> 'AUTO' or 'NORMal'
         """
         self.write(':TRIGger:SWEep ' + sweep)
+        
+    def trigger_level_external(self, level):
+        self.write(':EXTernal:LEVel ' + level)
         
     def timebase_reference(self, reference):
         """
@@ -96,6 +128,13 @@ class Keysight_DSOX1204A(VisaInstrument):
     def autoscale(self):
         self.write(':AUToscale') #The :AUToscale command evaluates all input signals and sets the correct
                                 #conditions to display the signals
+                                
+    def autoscale_custom(self, channel, frequency, amplitude):
+        self.timebase_reference('LEFT')
+        self.timebase_range(str(1/frequency))
+        self.timebase_position(str(0.1/frequency))
+        self.channel_range(str(channel),str(amplitude))
+        
             
     def acquire_type(self,control_value):
         self.write(':ACQuire:TYPE {}'.format(control_value)) #select normal, avergae or high resolution data
@@ -104,8 +143,11 @@ class Keysight_DSOX1204A(VisaInstrument):
         self.write(':ACQuire:MODE {}'.format(set_mode)) # other options are segmented. Option selected is RealTime
         
                 
-    def set_vertical_scale(self,vertical_scale_value):
-        self.write(':CHANnel1:SCALe {}'.format(vertical_scale_value))
+    def vertical_scale(self,vertical_scale):
+        self.write(':CHANnel1:SCALe {}'.format(vertical_scale))
+        
+    def vertical_range(self,vertical_range):
+        self.write(':CHANnel1:RANGe ' + vertical_range)        
     
     def digitize(self,channel_numbers_on):  #specialized RUN command
         for items in channel_numbers_on:
@@ -114,6 +156,7 @@ class Keysight_DSOX1204A(VisaInstrument):
             
     def single_run(self):
         self.write(':SINGle')  #The :SINGle command causes the instrument to acquire a single trigger of data.
+        
     
     def run(self):
         self.write(':RUN') #The :RUN command starts repetitive acquisitions
@@ -123,18 +166,21 @@ class Keysight_DSOX1204A(VisaInstrument):
         
         
         
-    def waveform_mode(self): # sets waveform mode
-        self.write(':WAVeform:POINts:MODE RAW')
+    def waveform_mode(self, mode): # sets waveform mode
+        """
+        <mode> 'NORMal', 'MAXimum', 'RAW'
+        """
+        self.write(':WAVeform:POINts:MODE ' + mode)
     
-    def set_waveform_points(self): # sets number of points
-        self.write(':WAVeform:POINts 1800')
+    def set_waveform_points(self, num_points): # sets number of points to acquire
+        self.write(':WAVeform:POINts ' + num_points)
         
     def waveform_source(self,waveform_channel_source):
         self.write(':WAVeform:SOURce CHANnel{}'.format(waveform_channel_source))
         
         
-    def waveform_data_format(self):
-        self.write(':WAVEFORM:FORMAT BYTE')
+    def waveform_data_format(self, data_format):
+        self.write(':WAVEFORM:FORMAT ' + data_format)
 
     
 if __name__ == '__main__':
@@ -142,48 +188,49 @@ if __name__ == '__main__':
     rm = pyvisa.ResourceManager() # call resource manager from module pyvisa
     rm.list_resources() #lists all resources available in case one forgets the resoucrce address
     myScope = rm.open_resource('USB0::0x2A8D::0x0386::CN60476268::0::INSTR') #opens oscilloscope
-    myScope.timeout = 25000 #to set a timeout for the device operation
-
-     
+    #myScope.timeout = 0 #to set a timeout for the device operation
     myDSOX1204A = Keysight_DSOX1204A()
-  # myDSOX1204A.autoscale() # optional, creates a time lag for other instructions to execute and throws error
-    myDSOX1204A.channel_display_on(['1']) # channel 1 display alone is on
-    myDSOX1204A.trigger_edge_source('EXT')
-    myDSOX1204A.trigger_edge()
-    myDSOX1204A.trigger_edge_polarity()
-  #  myDSOX1204A.set_vertical_scale('20')
-    myDSOX1204A.acquire_type('NORMal') # other options are 'AVERage','HRESolution','PEAK'
-    #myDSOX1204A.run()
-    #myDSOX1204A.single_run()
-    #myDSOX1204A.digitize(['1']) # digitized only channel 1.
-    myDSOX1204A.waveform_mode() # set waveform mode
-    myDSOX1204A.set_waveform_points()
-    myDSOX1204A.waveform_source(['1'])
-    myDSOX1204A.waveform_data_format() # can be set to BYTE, WORD, ASCii
-    myDSOX1204A.acquire_mode('RTIMe') # other options are segmented. Option selected is RealTime
-
-    num_cycles = 1
-    values_all_cycles = np.array([])
-    for cycles in range(num_cycles):    
-        values_raw_binary = myScope.query_binary_values('WAV:DATA?', datatype='s')
-        values_unpacked = struct.unpack("%dB" % len(values_raw_binary), values_raw_binary[0])
-        values_all_cycles = np.append(values_all_cycles,values_unpacked)
-        
-    x_increment = myDSOX1204A.write(":WAVeform:XINCrement?")[0]
-    x_origin = myDSOX1204A.write(":WAVeform:XORigin?")[0]
-    y_increment = myDSOX1204A.write(":WAVeform:YINCrement?")[0]
-    y_origin = myDSOX1204A.write(":WAVeform:YORigin?")[0]
-    y_reference = myDSOX1204A.write(":WAVeform:YREFerence?")[0]
-   
-    f = open("waveform_data.csv", "w")
-    for i in range(0, len(values_all_cycles) - 1):
-        time_val = x_origin + (i * x_increment)
-        voltage = (((int(values_all_cycles[i]) - y_reference) * y_increment) + y_origin)
-        f.write("%E, %f\n" % (time_val, voltage))
-    f.close()
     
-    plt.plot(values_all_cycles)
-
+    test = False
+    
+    if test:
+        #myDSOX1204A.autoscale_custom('1',freq,amp)
+        myT3AFG30.set_output('C1','ON')
+        time.sleep(0.150)
+        myDSOX1204A.single_run()
+        time.sleep(0.1)
+        #time.sleep(0.2)
+        myT3AFG30.set_output('C1','OFF')
+        #time.sleep(1)
+        myDSOX1204A.waveform_source('1')
+        c1_data = myDSOX1204A.query(':WAV:DATA?')
+        myDSOX1204A.waveform_source('2')
+        c2_data = myDSOX1204A.query(':WAV:DATA?')
+    
+        x_increment = float(myDSOX1204A.query(":WAVeform:XINCrement?"))
+        x_origin = float(myDSOX1204A.query(":WAVeform:XORigin?"))
+        y_increment = float(myDSOX1204A.query(":WAVeform:YINCrement?"))
+        y_origin = float(myDSOX1204A.query(":WAVeform:YORigin?"))
+        y_reference = float(myDSOX1204A.query(":WAVeform:YREFerence?"))
+    
+        x_split = c1_data.split(',')
+        x2_split = c2_data.split(',')
+    
+        f = open("waveform_data.csv", "w")
+        for i in range(0, len(x_split) - 1):
+            if i is 0:
+                x_sep = x_split[i][11:]
+                x2_sep = x2_split[i][11:]
+            else:
+                x_sep = x_split[i][1:]
+                x2_sep = x2_split[i][1:]
+            time_val = x_origin + (i * x_increment)
+            #voltage = (((float(x_sep) - y_reference) * y_increment) + y_origin)
+            voltage1 = float(x_sep)
+            voltage2 = float(x2_sep)
+            f.write("%E, %f, %f\n" % (time_val, voltage1, voltage2))
+            #f.write(x_sep + '\n')
+        f.close()
 
 
     

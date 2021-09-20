@@ -17,8 +17,8 @@ class Teledyne_Lecroy_T3AFG30(VisaInstrument):
         super(Teledyne_Lecroy_T3AFG30, self).__init__(address)
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
-        self.reset()
-        self.outputs_off()
+        #self.reset()
+        #self.outputs_off()
 
     def reset(self):
         """Reset the instrument to its default state."""
@@ -48,7 +48,7 @@ class Teledyne_Lecroy_T3AFG30(VisaInstrument):
         """
         self.write(channel + ':BSWV FRQ,' + freq)
         
-    def set_arb_func(self, channel, func_name):
+    def arb_func(self, channel, func_name):
         """
         Assign stored waveform to channel.
         <channel> 'C1' or 'C2'
@@ -56,6 +56,22 @@ class Teledyne_Lecroy_T3AFG30(VisaInstrument):
         """
         self.write(channel + ':ARWV NAME,' + func_name)
         'must match exactly, does not throw error if no stored waveform matches'
+    
+    def burst_mode(self, channel, state):
+        """
+        Toggles burst mode on/off for specific channel.
+        """
+        self.write(channel + ':BTWV STATE,' + state)
+        
+    def burst_single(self, channel ):
+        self.write(channel + ':BTWV GATE_NCYC,NCYC')
+        self.write(channel + ':BTWV TIME,1')
+        
+    def burst_period(self, channel, period):
+        self.write(channel + ':BTWV PRD,' + period)
+        
+    def burst_trigger_state(self, channel, state):
+        self.write(channel + ':BWTV TRMD,' + state)
         
         #TODO
         #define util/output setup/polarity/invert function to flip arb wavesforms
