@@ -38,7 +38,7 @@ class Spectrometer(Instrument):
                                'reference', 'background', 'wavelengths',
                                'background_int', 'reference_int','variable_int_enabled',
                                'background_gradient','background_constant', 'averaging_enabled'
-                               ,'absorption_enabled','background_ref','background_int_ref')#jks68
+                               ,'absorption_enabled')
    
     variable_int_enabled = DumbNotifiedProperty(False)
     filename = DumbNotifiedProperty("spectrum")
@@ -53,8 +53,6 @@ class Spectrometer(Instrument):
         self.background_constant =None
         self.background_gradient = None
         self.background_int = None
-        self.background_ref = None#jks68
-        self.background_int_ref = None#jks68
         self.reference_int = None
       #  self.variable_int_enabled = DumbNotifiedProperty(False)
         self.latest_raw_spectrum = None
@@ -177,29 +175,13 @@ class Spectrometer(Instrument):
         self.update_config('background', self.background)
         self.update_config('background_int', self.background_int)
 
-#jks68 start 21/09/2021
-    def read_background_ref(self):
-        """Acquire a new spectrum and use it as a reference background.
-        This background should be less than 50% of the spectrometer saturation"""
-        background_1 = self.read_spectrum()
-        self.integration_time = 2.0*self.integration_time
-        self.integration_time = self.integration_time/2.0
-        self.background_ref = background_1
-        self.background_int_ref = self.integration_time
-        self.stored_backgrounds[self.reference_ID] = {'background_ref' : self.background_ref,
-                                                     'background_int_ref': self.background_int_ref}
-        self.update_config('background_ref', self.background_ref)
-        self.update_config('background_int_ref', self.background_int_ref)
-#jks68 start 21/09/2021
-        
     def clear_background(self):
         """Clear the current background reading."""
         self.background = None
         self.background_gradient = None
         self.background_constant = None
         self.background_int = None
-        self.background_ref = None#jks68
-        self.background_int_ref = None#jks68
+
     def read_reference(self):
         """Acquire a new spectrum and use it as a reference."""
         if self.averaging_enabled == True:
@@ -226,7 +208,7 @@ class Spectrometer(Instrument):
         """Return whether there's currently a valid background spectrum"""
         return len(self.background)==len(self.latest_raw_spectrum) and \
             sum(self.background)>0
-            
+
     def is_referenced(self):
         """Check whether there's currently a valid background and reference spectrum"""
         try:
@@ -234,20 +216,21 @@ class Spectrometer(Instrument):
                 len(self.reference)==len(self.latest_raw_spectrum) and \
                 sum(self.reference)>0
         except TypeError:
-            return False  
+            return False
+
     def process_spectrum(self, spectrum):
         """Subtract the background and divide by the reference, if possible"""
-        if self.background is not None:#bg taken
-            if self.reference is not None:#ref taken
+        if self.background is not None:
+            if self.reference is not None:
                 old_error_settings = np.seterr(all='ignore')
            #     new_spectrum = (spectrum - (self.background-np.min(self.background))*self.integration_time/self.background_int+np.min(self.background))/(((self.reference-np.min(self.background))*self.integration_time/self.reference_int - (self.background-np.min(self.background))*self.integration_time/self.background_int)+np.min(self.background))
                 if self.variable_int_enabled == True:
                     new_spectrum = (old_div((spectrum-(self.background_constant+self.background_gradient*self.integration_time)),(old_div((self.reference-(self.background_constant+self.background_gradient*self.reference_int))*self.integration_time,self.reference_int))))
                 else:
-                    new_spectrum = old_div((spectrum-self.background),(self.reference-self.background_ref))
+                    new_spectrum = old_div((spectrum-self.background),(self.reference-self.background))
                 np.seterr(**old_error_settings)
                 new_spectrum[np.isinf(new_spectrum)] = np.NaN #if the reference is nearly 0, we get infinities - just make them all NaNs.
-            else:#bg taken but ref not taken
+            else:
                 if self.variable_int_enabled == True:
                     new_spectrum = spectrum-(self.background_constant+self.background_gradient*self.integration_time)
                 else:
@@ -257,7 +240,8 @@ class Spectrometer(Instrument):
             new_spectrum = spectrum
         if self.absorption_enabled == True:
             return np.log10(old_div(1,new_spectrum))
-        return new_spectrum        
+        return new_spectrum
+
     def read_processed_spectrum(self):
         """Acquire a new spectrum and return a processed (referenced/background-subtracted) spectrum.
         
@@ -278,15 +262,6 @@ class Spectrometer(Instrument):
         """Return a masked array of the spectrum, showing only points where the reference
         is bright enough to be useful."""
         if self.reference is not None and self.background is not None:
-#jks68 start
-#            if self.background_ref is not None:
-#                reference = self.reference - self.background_ref
-#                mask = reference < reference.max() * threshold
-#                if len(spectrum.shape)>1:
-#                    mask = np.tile(mask, spectrum.shape[:-1]+(1,))
-#                return ma.array(spectrum, mask=mask)
-#            else:
-#jks68 end
             reference = self.reference - self.background
             mask = reference < reference.max() * threshold
             if len(spectrum.shape)>1:
@@ -458,15 +433,12 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
         self.integration_time.textChanged.connect(self.update_param)
 
         self.read_background_button.clicked.connect(self.button_pressed)
-        self.read_background_button_ref.clicked.connect(self.button_pressed)
         self.read_reference_button.clicked.connect(self.button_pressed)
         self.clear_background_button.clicked.connect(self.button_pressed)
-        self.clear_background_button_ref.clicked.connect(self.button_pressed)
         self.clear_reference_button.clicked.connect(self.button_pressed)
         self.load_state_button.clicked.connect(self.button_pressed)
 
         self.background_subtracted.stateChanged.connect(self.state_changed)
-        self.background_subtracted_ref.stateChanged.connect(self.state_changed) #jks68 21/09/2021
         self.referenced.stateChanged.connect(self.state_changed)
         
         self.Absorption_checkBox.stateChanged.connect(self.state_changed)
@@ -515,22 +487,12 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             self.spectrometer.read_background()
             self.background_subtracted.blockSignals(True)
             self.background_subtracted.setCheckState(QtCore.Qt.Checked)
-            self.background_subtracted.blockSignals(False)   
-        elif sender is self.read_background_button_ref:
-            self.spectrometer.read_background_ref()
-            self.background_subtracted_ref.blockSignals(True)
-            self.background_subtracted_ref.setCheckState(QtCore.Qt.Checked)
-            self.background_subtracted_ref.blockSignals(False)  
+            self.background_subtracted.blockSignals(False)            
         elif sender is self.clear_background_button:
             self.spectrometer.clear_background()
             self.background_subtracted.blockSignals(True)
             self.background_subtracted.setCheckState(QtCore.Qt.Unchecked)
             self.background_subtracted.blockSignals(False)
-        elif sender is self.clear_background_button_ref:
-            self.spectrometer.clear_background()
-            self.background_subtracted_ref.blockSignals(True)
-            self.background_subtracted_ref.setCheckState(QtCore.Qt.Unchecked)
-            self.background_subtracted_ref.blockSignals(False)
         elif sender is self.read_reference_button:
             self.spectrometer.read_reference()
             self.referenced.blockSignals(True)
@@ -554,9 +516,6 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
                 self.background_subtracted.blockSignals(True)
                 self.background_subtracted.setCheckState(QtCore.Qt.Checked)
                 self.background_subtracted.blockSignals(False)
-                self.background_subtracted_ref.blockSignals(True) #jks68 21/09/2021
-                self.background_subtracted_ref.setCheckState(QtCore.Qt.Checked) #jks68 21/09/2021
-                self.background_subtracted_ref.blockSignals(False) #jks68 21/09/2021
             else:
                 print('background not found in config file')
             if 'reference' in self.spectrometer.config_file:
@@ -576,10 +535,6 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             self.spectrometer.read_background()
         elif sender is self.background_subtracted and state == QtCore.Qt.Unchecked:
             self.spectrometer.clear_background()
-        if sender is self.background_subtracted_ref and state == QtCore.Qt.Checked: #jks68 21/09/2021
-            self.spectrometer.read_background_ref()#jks68 21/09/2021
-        elif sender is self.background_subtracted_ref and state == QtCore.Qt.Unchecked:#jks68 21/09/2021
-            self.spectrometer.clear_background()#jks68 21/09/2021
         if sender is self.referenced and state == QtCore.Qt.Checked:
             self.spectrometer.read_reference()
         elif sender is self.referenced and state == QtCore.Qt.Unchecked:
@@ -614,9 +569,6 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             self.background_subtracted.blockSignals(True)
             self.background_subtracted.setCheckState(QtCore.Qt.Unchecked)
             self.background_subtracted.blockSignals(False)
-            self.background_subtracted_ref.blockSignals(True)#jks68 21/09/2021
-            self.background_subtracted_ref.setCheckState(QtCore.Qt.Unchecked)#jks68 21/09/2021
-            self.background_subtracted_ref.blockSignals(False)#jks68 21/09/2021
 
 
             self.spectrometer._logger.info('No refence/background saved in slot %s to load' %args[0])
@@ -856,7 +808,6 @@ class DummySpectrometer(Spectrometer):
         super(DummySpectrometer, self).__init__()
         self._integration_time = 10
         self.background = np.zeros(len(self.wavelengths))
-        self.background_ref = np.zeros(len(self.wavelengths))#jks68
         self.reference = np.ones(len(self.wavelengths))
     def get_integration_time(self):
         return self._integration_time
