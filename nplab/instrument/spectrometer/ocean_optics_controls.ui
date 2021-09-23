@@ -351,23 +351,35 @@
          </widget>
         </item>
         <item row="0" column="2">
-         <widget class="QPushButton" name="read_background_button_2">
+         <widget class="QPushButton" name="read_background_button_ref">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="text">
            <string>Read Bg for Ref</string>
           </property>
          </widget>
         </item>
         <item row="1" column="2">
-         <widget class="QPushButton" name="clear_background_button_2">
+         <widget class="QPushButton" name="clear_background_button_ref">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="text">
            <string>Clear Bg for Ref</string>
           </property>
          </widget>
         </item>
         <item row="2" column="2">
-         <widget class="QCheckBox" name="background_subtracted_2">
+         <widget class="QCheckBox" name="background_subtracted_ref">
           <property name="text">
-           <string>Bg for Ref taken</string>
+           <string>Bg for Ref taken           </string>
           </property>
          </widget>
         </item>
