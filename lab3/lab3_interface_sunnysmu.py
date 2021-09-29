@@ -42,8 +42,6 @@ from nplab.ui.ui_tools import QtWidgets
 
 #myOceanOptics = OceanOpticsSpectrometer(0)
 
-
-
 class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     # To use auto_connect_by_name name all widgets using _WidgetType, e.g. Vhigh_DoubleSpinBox
     # Then define DumbNotifiedProperty with the same name without _WidgetType, e.g. Vhigh
@@ -116,7 +114,8 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             if not self.mode_smuOnly.isChecked():
                 if (self.mode_RamanOnly.isChecked() or self.mode_RamanAndDarkfield.isChecked() ):
                     self.RamanSpectrumImagePlotData = []
-                    self.RamanWavelengths = self.myShamdor.get_xaxis()
+#                    self.RamanWavelengths = #instead of that: self.myShamdor.get_xaxis() which was giving wavelengths rotated around central wavelengths
+                    self.RamanWavelengths = self.AndorControlUI.Andor.x_axis#jks68 24/09/2021 if this is not working, just flip the above spectrum around 'spectrum'
                     activeDatagroup.attrs.create('RamanWavelengths', self.RamanWavelengths)
                     activeDatagroup.attrs.create('RamanBackground', self.AndorControlUI.Andor.background) #jks68 17/08/2021
                     activeDatagroup.attrs.create('RamanIntegrationTime', self.RamanIntegrationTime)
@@ -132,6 +131,8 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
                     activeDatagroup.attrs.create('DarkfieldBackground', self.OOspectrometer.background)
                     activeDatagroup.attrs.create('DarkfieldReference', self.OOspectrometer.reference)
                     activeDatagroup.attrs.create('DarkfieldIntegrationTime', self.OOspectrometer.get_integration_time())
+                    activeDatagroup.attrs.create('DarkfieldBackground_Reference', self.OOspectrometer.background_ref)
+                    
                     #TEST BY THOMAS
                     #adding attributes for DF in-situ measurements
                     activeDatagroup.attrs.create('DarkfieldReferenceIntegrationTime', self.OOspectrometer.reference_int)
@@ -355,7 +356,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             self.laser_633.turn_off()
 
     def update_Raman_spectrum_plot(self, spectrum):
-        self.RamanSpectrum_plot.plot(self.RamanWavelengths, np.flip(spectrum), clear = True, pen = 'r')  # plot current Raman spectrum in real time, ##sunny added np.flip as thegraph was flipped over the centralw wavelength
+        self.RamanSpectrum_plot.plot(self.RamanWavelengths, clear = True, pen = 'r')  # plot current Raman spectrum in real time, ##sunny added 'np.flip(spectrum),' as the graph was flipped over the centralw wavelength
         self.RamanSpectrumImagePlotData.append(spectrum)     # plot Raman spectra over time as image plot        
         self.RamanImagePlotItem.setImage(np.asarray(self.RamanSpectrumImagePlotData))
                
@@ -466,10 +467,10 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.myShamdor.ReadMode = 3
         self.myShamdor.set_camera_parameter('SingleTrack', self.centre_row, self.num_rows)
         self.myShamdor.shamrock.SetWavelength(self.shamrockWavelength_spinBox.value())
-        self.RamanWavelengths = self.myShamdor.get_xaxis()
+        self.RamanWavelengths = self.AndorControlUI.Andor.x_axis #jks68 instead of 'self.myShamdor.get_xaxis()'
         time.sleep(0.5)
         self.RamanSpectrum = np.asarray( self.myShamdor.capture()[0] )
-        self.RamanSpectrum_plot.plot(self.RamanWavelengths, np.flip(self.RamanSpectrum), clear = True, pen = 'r')
+        self.RamanSpectrum_plot.plot(self.RamanWavelengths, clear = True, pen = 'r')#sunny added 'np.flip(self.RamanSpectrum)' to flip spectrum
         
     def save_single_Raman_spectrum(self):
         activeSingleRamanDataset = self.singleRamanSpectraGroup.create_dataset('singleRamanSpectrum_%d', data = self.RamanSpectrum)
