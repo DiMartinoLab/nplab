@@ -24,14 +24,13 @@ from nplab.instrument.light_sources.matchbox_laser import MatchboxLaser
 from nplab.instrument.stage.SMC100 import SMC100
 import nplab.utils.gui 
 import nplab.datafile as datafile
-from nplab.instrument.spectrometer import Spectrometer
+#from nplab.instrument.spectrometer import Spectrometer
 from nplab.experiment import Experiment, ExperimentStopped
 from nplab.utils.notified_property import DumbNotifiedProperty, NotifiedProperty
 from nplab.utils.gui import QtCore, QtGui, uic, get_qt_app
 from nplab.ui.ui_tools import UiTools
 #import Rotation_Stage as RS
 #import visa
-import os
 import time
 import threading
 import numpy as np
@@ -41,6 +40,8 @@ from nplab.ui.ui_tools import QtWidgets
 
 
 #myOceanOptics = OceanOpticsSpectrometer(0)
+
+
 
 class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     # To use auto_connect_by_name name all widgets using _WidgetType, e.g. Vhigh_DoubleSpinBox
@@ -58,6 +59,8 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     stepwiseHoldNumber = DumbNotifiedProperty(3)
     rampHoldNumber = DumbNotifiedProperty(1)
     rampIntermediateV = DumbNotifiedProperty(0.0)
+    #added by Thomas for multiple cycles test
+    MeasCycles = DumbNotifiedProperty(1)
     
     description = DumbNotifiedProperty("description")
     single_Raman_spectrum_description = DumbNotifiedProperty('single spectrum description')
@@ -70,7 +73,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     def __init__ (self, activeDatafile):
         super(Lab3_experiment, self).__init__()
 #        uic.loadUi('lab3_interface.ui', self)
-        uic.loadUi('lab3_interface_sunny.ui', self)
+        uic.loadUi('lab3_interface_sunny_thomas-edit.ui', self)
         
 ###comment out software you are not going to use
         self.initialise_smu() #Keithley, for electrical measurements
@@ -100,171 +103,190 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 
     #TODO ALICE - go through this line by line
     def run(self, *args):
-        # *args collects extra unnecessary arguments from qt
-        self.voltages_data = []
-        self.times_data = []
-        self.currents_data = []
-        self.capacitance_data = []
-        stepwiseCounter = 1
-        rampCounter = 1
-        runningRampInterval = False
-        try:
-            activeDatagroup = self.create_data_group('scan_%d')
-            activeDatagroup.attrs.create('description', str(self.description))
-            if not self.mode_smuOnly.isChecked():
-                if (self.mode_RamanOnly.isChecked() or self.mode_RamanAndDarkfield.isChecked() ):
-                    self.RamanSpectrumImagePlotData = []
-#                    self.RamanWavelengths = #instead of that: self.myShamdor.get_xaxis() which was giving wavelengths rotated around central wavelengths
-                    self.RamanWavelengths = self.AndorControlUI.Andor.x_axis#jks68 24/09/2021 if this is not working, just flip the above spectrum around 'spectrum'
-                    activeDatagroup.attrs.create('RamanWavelengths', self.RamanWavelengths)
-                    activeDatagroup.attrs.create('RamanBackground', self.AndorControlUI.Andor.background) #jks68 17/08/2021
-                    activeDatagroup.attrs.create('RamanIntegrationTime', self.RamanIntegrationTime)
-                    activeDatagroup.attrs.create('RamanSlit_um', self.myShamdor.shamrock.GetSlit())
-                    self.myShamdor.set_camera_parameter('Exposure', self.RamanIntegrationTime)
-                    self.myShamdor.AcquisitionMode = 1    # acquisition mode = 1 for single frame acquisition
-                    self.myShamdor.ReadMode = 3          # read mode = single track (reads centre_row +- num_rows). Output is one spectrum.
-                    self.myShamdor.set_camera_parameter('SingleTrack', self.centre_row, self.num_rows)
-                if (self.mode_DarkfieldOnly.isChecked() or self.mode_RamanAndDarkfield.isChecked() ):
-                    self.darkfieldSpectrumImagePlotData = []
-                    self.darkfieldWavelengths = self.OOspectrometer.read_wavelengths()
-                    activeDatagroup.attrs.create('DarkfieldWavelengths', self.darkfieldWavelengths)
-                    activeDatagroup.attrs.create('DarkfieldBackground', self.OOspectrometer.background)
-                    activeDatagroup.attrs.create('DarkfieldReference', self.OOspectrometer.reference)
-                    activeDatagroup.attrs.create('DarkfieldIntegrationTime', self.OOspectrometer.get_integration_time())
-                    activeDatagroup.attrs.create('DarkfieldBackground_Reference', self.OOspectrometer.background_ref)
-                    activeDatagroup.attrs.create('DarkfieldBackground_ReferenceIntegrationTime', self.OOspectrometer.background_int_ref)                    
-                    #TEST BY THOMAS
-                    #adding attributes for DF in-situ measurements
-                    activeDatagroup.attrs.create('DarkfieldReferenceIntegrationTime', self.OOspectrometer.reference_int)
-                    activeDatagroup.attrs.create('DarkfieldBackgroundIntegrationTime', self.OOspectrometer.background_int)
-                if (self.mode_PLOnly.isChecked()):
-                    self.darkfieldSpectrumImagePlotData = []
-                    self.darkfieldWavelengths = self.OOspectrometer.read_wavelengths()
-                    activeDatagroup.attrs.create('PLWavelengths', self.darkfieldWavelengths)
-                    activeDatagroup.attrs.create('PLBackground', self.OOspectrometer.background)
-                    activeDatagroup.attrs.create('PLIntegrationTime', self.OOspectrometer.get_integration_time())
-
-            self.smu.src_voltage_range = float(self.Vrange_comboBox.currentText())
-            self.smu.meas_current_range = float(self.Irange_comboBox.currentText())
-            self.smu.src_voltage_limit = float(self.Vlimit_doubleSpinBox.value())
-            self.smu.src_current_limit = float(self.Ilimit_doubleSpinBox.value())
-            
-            #TEST BY THOMAS
-            #adding attributes for electrical measurements
-            activeDatagroup.attrs.create('CurrentRange', self.smu.meas_current_range)
-            activeDatagroup.attrs.create('CurrentLimit', self.smu.src_current_limit)
+        
+        for cycle in range(0,int(self.MeasCycles)):
+    
+            # *args collects extra unnecessary arguments from qt
+            self.voltages_data = []
+            self.times_data = []
+            self.currents_data = []
+            self.capacitance_data = []
+            stepwiseCounter = 1
+            rampCounter = 1
+            runningRampInterval = False
+        
             try:
-                activeDatagroup.attrs.create('VoltageProfilePts', self.radiantnopoints)
-            except:
-                print('No voltage profile uploaded!')
-            
-            activeVoltage = 0.0
-            rampActiveVoltage = 0.0
-            self.voltageRampSign = 1
-            self.smu.output = 1
-            self.smu.delay=0
-            t0 = time.time()
-            print("----- Measurement started -----")
-            n=0
-            while True:
-                self.smu.src_voltage = activeVoltage
-                #spectrum = self.spectrometer.read_spectrum(bundle_metadata=True)
-                if self.mode_smuOnly.isChecked():
-                    self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
+                activeDatagroup = self.create_data_group('scan_%d')
+                activeDatagroup_ex_situ = self.create_data_group('scan_%d')
+                if self.MeasCycles > 1:
+                    activeDatagroup.attrs.create('description', str(self.description +'_' + str(cycle)))
+                    activeDatagroup_ex_situ.attrs.create('description', str(self.description +'_' + str(cycle)))
                 else:
-                    
-                    #TODO:
-                    # for raman series: check mirror position
-                    # put in DF configuration
-                        # mirror in DF
-                        # open shutter white light
-                        # close andor shutter (not needed)
-                        # take one DF spectrum
-                    # put in raman configuration
-                        # mirror in raman
-                        # close shutter white light
-                        # open andor shutter
-                        # take raman, save
-                    # put in DF configuration and save as DF final
-                    
-                    if (self.mode_RamanOnly.isChecked()):
-                        RamanSpectrum_thread = threading.Thread(target = self.acquire_Raman_spectrum )    # acquiring Raman spectrum in new thread
-                        RamanSpectrum_thread.start()
-                        spectraActiveTime = (time.time()-t0)
-                        activeDatagroup.append_dataset("RamanSpectra_times", spectraActiveTime)
-                        while RamanSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
-                            self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
-                        self.live_Raman_spectrum_signal.emit(self.RamanSpectrum)
-                        activeDatagroup.append_dataset("RamanSpectrum", self.RamanSpectrum)
-                    
-                    if (self.mode_DarkfieldOnly.isChecked()):
-                        DarkfieldSpectrum_thread = threading.Thread(target = self.acquire_darkfield_spectrum )    # acquiring Raman spectrum in new thread
-                        DarkfieldSpectrum_thread.start()
-                        spectraActiveTime = (time.time()-t0)
-                        activeDatagroup.append_dataset("darkfieldSpectra_times", spectraActiveTime)
-                        while DarkfieldSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
-                            self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
-                        self.live_darkfield_spectrum_signal.emit(self.darkfieldSpectrum)
-                        activeDatagroup.append_dataset("darkfieldSpectrum", self.darkfieldSpectrum)
+                    activeDatagroup.attrs.create('description', str(self.description))
 
+                if not self.mode_smuOnly.isChecked():
+                    if (self.mode_RamanOnly.isChecked() or self.mode_RamanAndDarkfield.isChecked() ):
+                        self.RamanSpectrumImagePlotData = []
+                        self.RamanWavelengths = self.myShamdor.get_xaxis()
+                        activeDatagroup.attrs.create('RamanWavelengths', self.RamanWavelengths)
+                        activeDatagroup.attrs.create('RamanIntegrationTime', self.RamanIntegrationTime)
+                        activeDatagroup.attrs.create('RamanSlit_um', self.myShamdor.shamrock.GetSlit())
+                        self.myShamdor.set_camera_parameter('Exposure', self.RamanIntegrationTime)
+                        self.myShamdor.AcquisitionMode = 1    # acquisition mode = 1 for single frame acquisition
+                        self.myShamdor.ReadMode = 3          # read mode = single track (reads centre_row +- num_rows). Output is one spectrum.
+                        self.myShamdor.set_camera_parameter('SingleTrack', self.centre_row, self.num_rows)
+                    if (self.mode_DarkfieldOnly.isChecked() or self.mode_RamanAndDarkfield.isChecked() ):
+                        self.darkfieldSpectrumImagePlotData = []
+                        self.darkfieldWavelengths = self.OOspectrometer.read_wavelengths()
+                        activeDatagroup.attrs.create('DarkfieldWavelengths', self.darkfieldWavelengths)
+                        activeDatagroup.attrs.create('DarkfieldBackground', self.OOspectrometer.background)
+                        activeDatagroup.attrs.create('DarkfieldReference', self.OOspectrometer.reference)
+                        activeDatagroup.attrs.create('DarkfieldIntegrationTime', self.OOspectrometer.get_integration_time())
+                        #TEST BY THOMAS
+                        #adding attributes for DF in-situ measurements
+                        activeDatagroup.attrs.create('DarkfieldReferenceIntegrationTime', self.OOspectrometer.reference_int)
+                        activeDatagroup.attrs.create('DarkfieldBackgroundIntegrationTime', self.OOspectrometer.background_int)
                     if (self.mode_PLOnly.isChecked()):
-                        DarkfieldSpectrum_thread = threading.Thread(target = self.acquire_darkfield_spectrum )    # acquiring Raman spectrum in new thread
-                        DarkfieldSpectrum_thread.start()
-                        spectraActiveTime = (time.time()-t0)
-                        activeDatagroup.append_dataset("PLSpectra_times", spectraActiveTime)
-                        while DarkfieldSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
-                            self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
-                        self.live_darkfield_spectrum_signal.emit(self.darkfieldSpectrum)
-                        activeDatagroup.append_dataset("PLSpectrum", self.darkfieldSpectrum)
+                        self.darkfieldSpectrumImagePlotData = []
+                        self.darkfieldWavelengths = self.OOspectrometer.read_wavelengths()
+                        activeDatagroup.attrs.create('PLWavelengths', self.darkfieldWavelengths)
+                        activeDatagroup.attrs.create('PLIntegrationTime', self.OOspectrometer.get_integration_time())
+    
+                self.smu.src_voltage_range = float(self.Vrange_comboBox.currentText())
+                self.smu.meas_current_range = float(self.Irange_comboBox.currentText())
+                self.smu.src_voltage_limit = float(self.Vlimit_doubleSpinBox.value())
+                self.smu.src_current_limit = float(self.Ilimit_doubleSpinBox.value())
+                
+                #TEST BY THOMAS
+                #adding attributes for electrical measurements
+                activeDatagroup.attrs.create('CurrentRange', self.smu.meas_current_range)
+                activeDatagroup.attrs.create('CurrentLimit', self.smu.src_current_limit)
+                try:
+                    activeDatagroup.attrs.create('VoltageProfilePts', self.radiantnopoints)
+                except:
+                    print('No voltage profile uploaded!')
+                
+                activeVoltage = 0.0
+                rampActiveVoltage = 0.0
+                self.voltageRampSign = 1
+                self.smu.output = 1
+                self.smu.delay=0
+                t0 = time.time()
+                print("----- Measurement started -----")
+                n=0
+                
+                actively_measuring = True
+                while actively_measuring:
+                    self.smu.src_voltage = activeVoltage
+                    #spectrum = self.spectrometer.read_spectrum(bundle_metadata=True)
+                    if self.mode_smuOnly.isChecked():
+                        self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
+                    else:
                         
-                    if (self.mode_RamanAndDarkfield.isChecked()):
-                        # nothing for now
-                        pass
-                
-                if self.hold.isChecked():       # if hold checkbox is checked do not change the voltage
-                    pass
-                else:                           # running in ramp or stepwise mode?
-                    if self.RampON.isChecked():
-                        if rampCounter < self.rampHoldNumber:
-                            rampCounter += 1
-                        else:                   # check if running a ramp with intermediate voltage value between steps
-                            if (not self.RampIntermediateStep.isChecked()) or runningRampInterval:
-                                if (rampActiveVoltage >= self.Vmax):    # if activeVoltage not in [Vmin,Vmax], e.g. after stepwise mode, reset it to Vmax or Vmin
-                                    if (rampActiveVoltage > (self.Vmax + self.rampStep) ):
-                                        rampActiveVoltage = self.Vmax + self.rampStep
-                                    self.voltageRampSign = -1
-                                elif (rampActiveVoltage <= self.Vmin):
-                                    if (rampActiveVoltage < (self.Vmin - self.rampStep) ):
-                                        rampActiveVoltage = self.Vmin - self.rampStep
-                                    self.voltageRampSign = 1
-                                rampActiveVoltage += self.voltageRampSign * self.rampStep
-                                activeVoltage = rampActiveVoltage
-                                runningRampInterval = False
-                            elif self.RampIntermediateStep.isChecked() and (not runningRampInterval):
-                                activeVoltage = self.rampIntermediateV
-                                runningRampInterval = True
-                            rampCounter = 1                            
-                    elif self.RadiantFile.isChecked():
-                        #self.smu_wait = self.radianttimedelay*0.001
-                        time.sleep((1/(40*self.Vlow) - 1/40)) #DLCC
-                        if type(self.radiantvoltages)==np.ndarray:
-                            if n==self.radiantnopoints:
-                                pass
-                            activeVoltage = self.Vhigh * self.radiantvoltages[n]/100
-                            n+=1
+                        #TODO:
+                        # for raman series: check mirror position
+                        # put in DF configuration
+                            # mirror in DF
+                            # open shutter white light
+                            # close andor shutter (not needed)
+                            # take one DF spectrum
+                        # put in raman configuration
+                            # mirror in raman
+                            # close shutter white light
+                            # open andor shutter
+                            # take raman, save
+                        # put in DF configuration and save as DF final
+                        
+                        if (self.mode_RamanOnly.isChecked()):
+                            RamanSpectrum_thread = threading.Thread(target = self.acquire_Raman_spectrum )    # acquiring Raman spectrum in new thread
+                            RamanSpectrum_thread.start()
+                            spectraActiveTime = (time.time()-t0)
+                            activeDatagroup.append_dataset("RamanSpectra_times", spectraActiveTime)
+                            while RamanSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
+                                self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
+                            self.live_Raman_spectrum_signal.emit(self.RamanSpectrum)
+                            activeDatagroup.append_dataset("RamanSpectrum", self.RamanSpectrum)
+                        
+                        if (self.mode_DarkfieldOnly.isChecked()):
+                            DarkfieldSpectrum_thread = threading.Thread(target = self.acquire_darkfield_spectrum )    # acquiring Raman spectrum in new thread
+                            DarkfieldSpectrum_thread.start()
+                            spectraActiveTime = (time.time()-t0)
+                            activeDatagroup.append_dataset("darkfieldSpectra_times", spectraActiveTime)
+                            while DarkfieldSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
+                                self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
+                            self.live_darkfield_spectrum_signal.emit(self.darkfieldSpectrum)
+                            activeDatagroup.append_dataset("darkfieldSpectrum", self.darkfieldSpectrum)
+    
+                        if (self.mode_PLOnly.isChecked()):
+                            DarkfieldSpectrum_thread = threading.Thread(target = self.acquire_darkfield_spectrum )    # acquiring Raman spectrum in new thread
+                            DarkfieldSpectrum_thread.start()
+                            spectraActiveTime = (time.time()-t0)
+                            activeDatagroup.append_dataset("PLSpectra_times", spectraActiveTime)
+                            while DarkfieldSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
+                                self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
+                            self.live_darkfield_spectrum_signal.emit(self.darkfieldSpectrum)
+                            activeDatagroup.append_dataset("PLSpectrum", self.darkfieldSpectrum)
                             
-                        else:
-                            print('no file selected')
+                        if (self.mode_RamanAndDarkfield.isChecked()):
+                            # nothing for now
                             pass
-                self.wait_or_stop(self.smu_wait)
-                
-        except ExperimentStopped:
-            print("----- Measurement stopped -----")
-        finally:
-            self.activeDatafile.flush()
-            self.smu.output = 0
-            self.smu.src_voltage=0 #added by sunny to turn off voltage after experiement finished
-            #self.AndorSpectrometer.light_shutter.open_shutter()
+                    
+                    if self.hold.isChecked():       # if hold checkbox is checked do not change the voltage
+                        pass
+                    else:                           # running in ramp or stepwise mode?
+                        if self.RampON.isChecked():
+                            if rampCounter < self.rampHoldNumber:
+                                rampCounter += 1
+                            else:                   # check if running a ramp with intermediate voltage value between steps
+                                if (not self.RampIntermediateStep.isChecked()) or runningRampInterval:
+                                    if (rampActiveVoltage >= self.Vmax):    # if activeVoltage not in [Vmin,Vmax], e.g. after stepwise mode, reset it to Vmax or Vmin
+                                        if (rampActiveVoltage > (self.Vmax + self.rampStep) ):
+                                            rampActiveVoltage = self.Vmax + self.rampStep
+                                        self.voltageRampSign = -1
+                                    elif (rampActiveVoltage <= self.Vmin):
+                                        if (rampActiveVoltage < (self.Vmin - self.rampStep) ):
+                                            rampActiveVoltage = self.Vmin - self.rampStep
+                                        self.voltageRampSign = 1
+                                    rampActiveVoltage += self.voltageRampSign * self.rampStep
+                                    activeVoltage = rampActiveVoltage
+                                    runningRampInterval = False
+                                elif self.RampIntermediateStep.isChecked() and (not runningRampInterval):
+                                    activeVoltage = self.rampIntermediateV
+                                    runningRampInterval = True
+                                rampCounter = 1                            
+                        elif self.RadiantFile.isChecked():
+                            #self.smu_wait = self.radianttimedelay*0.001
+                            time.sleep((1/(40*self.Vlow) - 1/40)) #DLCC
+                            if type(self.radiantvoltages)==np.ndarray:
+                                if n<self.radiantnopoints:
+                                    #raise ExperimentStopped()
+                                    activeVoltage = self.Vhigh * self.radiantvoltages[n]/100
+                                    n+=1
+                                else:
+                                    actively_measuring = False
+                                    if self.MeasCycles > 1:
+                                        print("----- Voltage Profile Cycle #" + str(cycle+1) +" Finished -----")
+                                    else:
+                                        print("----- Voltage Profile Finished -----")
+                                    self.activeDatafile.flush()
+                            else:
+                                print('no file selected')
+                                pass
+                    self.wait_or_stop(self.smu_wait)
+                    
+                DarkfieldSpectrum_thread = threading.Thread(target = self.acquire_darkfield_spectrum )
+                DarkfieldSpectrum_thread.start()
+                spectraActiveTime = (time.time()-t0)
+                activeDatagroup_ex_situ.append_dataset("darkfieldSpectra_times", spectraActiveTime)
+                activeDatagroup_ex_situ.append_dataset("darkfieldSpectrum", self.darkfieldSpectrum)
+            except ExperimentStopped:
+                print("----- Measurement stopped -----")
+                break
+            finally:
+                self.activeDatafile.flush()
+                self.smu.output = 0
+                self.smu.src_voltage=0 #added by sunny to turn off voltage after experiement finished
+                #self.AndorSpectrometer.light_shutter.open_shutter()
 
     def initialise_Shamdor(self):
         self.myShamdor = Shamdor()
@@ -356,7 +378,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             self.laser_633.turn_off()
 
     def update_Raman_spectrum_plot(self, spectrum):
-        self.RamanSpectrum_plot.plot(self.RamanWavelengths, clear = True, pen = 'r')  # plot current Raman spectrum in real time, ##sunny added 'np.flip(spectrum),' as the graph was flipped over the centralw wavelength
+        self.RamanSpectrum_plot.plot(self.RamanWavelengths, np.flip(spectrum), clear = True, pen = 'r')  # plot current Raman spectrum in real time, ##sunny added np.flip as thegraph was flipped over the centralw wavelength
         self.RamanSpectrumImagePlotData.append(spectrum)     # plot Raman spectra over time as image plot        
         self.RamanImagePlotItem.setImage(np.asarray(self.RamanSpectrumImagePlotData))
                
@@ -467,10 +489,10 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.myShamdor.ReadMode = 3
         self.myShamdor.set_camera_parameter('SingleTrack', self.centre_row, self.num_rows)
         self.myShamdor.shamrock.SetWavelength(self.shamrockWavelength_spinBox.value())
-        self.RamanWavelengths = self.AndorControlUI.Andor.x_axis #jks68 instead of 'self.myShamdor.get_xaxis()'
+        self.RamanWavelengths = self.myShamdor.get_xaxis()
         time.sleep(0.5)
         self.RamanSpectrum = np.asarray( self.myShamdor.capture()[0] )
-        self.RamanSpectrum_plot.plot(self.RamanWavelengths, clear = True, pen = 'r')#sunny added 'np.flip(self.RamanSpectrum)' to flip spectrum
+        self.RamanSpectrum_plot.plot(self.RamanWavelengths, np.flip(self.RamanSpectrum), clear = True, pen = 'r')
         
     def save_single_Raman_spectrum(self):
         activeSingleRamanDataset = self.singleRamanSpectraGroup.create_dataset('singleRamanSpectrum_%d', data = self.RamanSpectrum)
@@ -505,8 +527,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 
 
 if __name__ == '__main__':
-    activeDatafile = nplab.current_datafile(working_directory = os.path.abspath(os.path.join(os.getcwd(),"../../..")))
-    #working directory should now be C:\\Users\\<name>\\Documents    
+    activeDatafile = nplab.current_datafile()    
     gui_activeDatafile = activeDatafile.get_qt_ui()
     gui_activeDatafile.show()
     

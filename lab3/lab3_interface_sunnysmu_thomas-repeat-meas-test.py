@@ -76,10 +76,10 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         uic.loadUi('lab3_interface_sunny_thomas-edit.ui', self)
         
 ###comment out software you are not going to use
-    #    self.initialise_smu() #Keithley, for electrical measurements
+        self.initialise_smu() #Keithley, for electrical measurements
         self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
         self.initialise_SMC100() #actuators for xy stage
-    #    self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
+        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
 #        self.initialise_Shamdor() #Andor, for Raman and 633nm laser 
         self.initialise_shutter() #control box
 ####end        
