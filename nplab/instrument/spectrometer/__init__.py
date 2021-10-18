@@ -240,21 +240,39 @@ class Spectrometer(Instrument):
         except TypeError:
             return False  
     def process_spectrum(self, spectrum):
-        """Subtract the background and divide by the reference, if possible"""
+        """Subtract the background and divide by the reference, if possible; old version:
         if self.background is not None:#bg taken
             if self.reference is not None:#ref taken
                 old_error_settings = np.seterr(all='ignore')
-           #     new_spectrum = (spectrum - (self.background-np.min(self.background))*self.integration_time/self.background_int+np.min(self.background))/(((self.reference-np.min(self.background))*self.integration_time/self.reference_int - (self.background-np.min(self.background))*self.integration_time/self.background_int)+np.min(self.background))
-#jks68 22/09/2021 start
-                if self.background_ref is not None:
+                #new_spectrum = (spectrum - (self.background-np.min(self.background))*self.integration_time/self.background_int+np.min(self.background))/(((self.reference-np.min(self.background))*self.integration_time/self.reference_int - (self.background-np.min(self.background))*self.integration_time/self.background_int)+np.min(self.background))
+                if self.variable_int_enabled == True:
+                    new_spectrum = (old_div((spectrum-(self.background_constant+self.background_gradient*self.integration_time)),(old_div((self.reference-(self.background_constant+self.background_gradient*self.reference_int))*self.integration_time,self.reference_int))))
+                else:
+                    new_spectrum = old_div((spectrum-self.background),(self.reference-self.background))
+                np.seterr(**old_error_settings)
+                new_spectrum[np.isinf(new_spectrum)] = np.NaN #if the reference is nearly 0, we get infinities - just make them all NaNs.
+            else:#bg taken but ref not taken
+                if self.variable_int_enabled == True:
+                    new_spectrum = spectrum-(self.background_constant+self.background_gradient*self.integration_time)
+                else:
+                    new_spectrum = spectrum-self.background   
+        else:
+            new_spectrum = spectrum
+        if self.absorption_enabled == True:
+            return np.log10(old_div(1,new_spectrum))
+        return new_spectrum"""
+#jks68 23/09/2021 new version:
+        if self.background is not None:#bg taken
+            if self.reference is not None:#ref taken
+                old_error_settings = np.seterr(all='ignore')
+                if self.background_ref is not None:#bg_ref taken
                     if self.variable_int_enabled == True:
                         new_spectrum = old_div((spectrum-(self.background_constant+self.background_gradient*self.integration_time)),(self.reference-self.background_ref))
-                    else:
+                    else:#bg_ref NOT taken
                         new_spectrum = old_div((spectrum-self.background),(self.reference-self.background_ref))
                     np.seterr(**old_error_settings)
-                    new_spectrum[np.isinf(new_spectrum)] = np.NaN #if the reference is nearly 0, we get infinities - just make them all NaNs.
-                else:
-#jks68 22/09/2021 end
+                    new_spectrum[np.isinf(new_spectrum)] = np.NaN
+                else:#bg_ref NOT taken, only bg taken
                     if self.variable_int_enabled == True:
                         new_spectrum = (old_div((spectrum-(self.background_constant+self.background_gradient*self.integration_time)),(old_div((self.reference-(self.background_constant+self.background_gradient*self.reference_int))*self.integration_time,self.reference_int))))
                     else:
@@ -265,13 +283,23 @@ class Spectrometer(Instrument):
                 if self.variable_int_enabled == True:
                     new_spectrum = spectrum-(self.background_constant+self.background_gradient*self.integration_time)
                 else:
-                    new_spectrum = spectrum-self.background
-                
-        else:
-            new_spectrum = spectrum
+                    new_spectrum = spectrum-self.background   
+        else:#bg NOT taken
+            if self.reference is not None:#ref taken
+                if self.background_ref is not None:#bg_ref taken
+                    new_spectrum = old_div((spectrum-self.background_ref),(self.reference-self.background_ref))
+                else:#bg_ref NOT taken
+                    print('Click <Read Bg for Ref> button before aquiring reference!!!')
+            else:#bg NOT taken, ref NOT taken, bg_ref not taken
+                new_spectrum = spectrum
         if self.absorption_enabled == True:
             return np.log10(old_div(1,new_spectrum))
-        return new_spectrum        
+        
+        if self.background_ref is None and self.reference is not None and self.background is None:
+            print('Click <Read Bg for Ref> button before aquiring reference!!!')
+        else:
+            return new_spectrum        
+#jks68 23/09/2021 new version end        
     def read_processed_spectrum(self):
         """Acquire a new spectrum and return a processed (referenced/background-subtracted) spectrum.
         
@@ -292,16 +320,12 @@ class Spectrometer(Instrument):
         """Return a masked array of the spectrum, showing only points where the reference
         is bright enough to be useful."""
         if self.reference is not None and self.background is not None:
-#jks68 start
-#            if self.background_ref is not None:
-#                reference = self.reference - self.background_ref
-#                mask = reference < reference.max() * threshold
-#                if len(spectrum.shape)>1:
-#                    mask = np.tile(mask, spectrum.shape[:-1]+(1,))
-#                return ma.array(spectrum, mask=mask)
-#            else:
-#jks68 end
-            reference = self.reference - self.background
+#jks68 23/09/2021 start:
+            if self.background_ref is not None:
+                reference = self.reference - self.background_ref
+            else:
+#jks68 23/09/2021 end:
+                reference = self.reference - self.background
             mask = reference < reference.max() * threshold
             if len(spectrum.shape)>1:
                 mask = np.tile(mask, spectrum.shape[:-1]+(1,))
