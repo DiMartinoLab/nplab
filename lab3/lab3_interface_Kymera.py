@@ -15,6 +15,7 @@ Created on Jan 15 10:23:36 2019
 import nplab
 
 from nplab.instrument.spectrometer.shamdor import Shamdor
+from nplab.instrument.spectrometer.kandor import Kandor#jks68 19/10/2021
 from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
 from nplab.instrument.electronics.keithley_2636b_smu import Keithley2636B as Keithley
 from nplab.instrument.stage.smaract_mcs import SmaractMCSSerial
@@ -77,8 +78,9 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 #        self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
         self.initialise_SMC100() #actuators for xy stage
 #        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
-#        self.initialise_Shamdor() #Andor, for Raman and 633nm laser 
         self.initialise_shutter() #control box
+#        self.initialise_Shamdor() #Andor, for Raman and 633nm laser 
+#        self.initialise_Kandor() #Kymera, for Raman with 785nm laser #jks68 19/10/2021
 ####end        
         self.radiantvoltages=None
 
