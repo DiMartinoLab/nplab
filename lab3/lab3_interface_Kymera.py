@@ -99,7 +99,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.openstage.clicked.connect(self.open_SMC100_ui)
 #        self.myArduino.shutterIN() #To ensure shutter is closed
         
-
+#start of lab 3 experiment
     #TODO ALICE - go through this line by line
     def run(self, *args):
         # *args collects extra unnecessary arguments from qt
@@ -267,13 +267,19 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             self.smu.output = 0
             self.smu.src_voltage=0 #added by sunny to turn off voltage after experiement finished
             #self.AndorSpectrometer.light_shutter.open_shutter()
-
+#end of lab 3 experiment
+            
     def initialise_Shamdor(self):
         self.myShamdor = Shamdor()
         self.myShamdor.shamrock.SetSlit(100)
 #        self.myShamdor.use_shifts = True   #Uncomment For Raman Shift (Instead of Plotting with wavelength)
         print('Shamdor initialised')
 
+    def initialise_Kandor(self):#jks68 19/10/2021
+        self.myKandor = Shamdor()#jks68 19/10/2021
+        self.myKandor.shamrock.SetSlit(100)#jks68 19/10/2021
+        print('Kymera initialised')#jks68 19/10/2021
+        
     def initialise_smu(self):
         self.smu = Keithley.get_instance(address = 'USB0::0x05E6::0x2634::4454529::INSTR')
         self.smu.display = 0    # display current readings
