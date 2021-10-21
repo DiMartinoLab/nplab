@@ -77,7 +77,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 #        self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
         self.initialise_SMC100() #actuators for xy stage
 #        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
-#        self.initialise_Shamdor() #Andor, for Raman and 633nm laser 
+        self.initialise_Shamdor() #Andor, for Raman and 633nm laser 
         self.initialise_shutter() #control box
 ####end        
         self.radiantvoltages=None

@@ -80,7 +80,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 #        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
         self.initialise_shutter() #control box
 #        self.initialise_Shamdor() #Andor, for Raman and 633nm laser 
-#        self.initialise_Kandor() #Kymera, for Raman with 785nm laser #jks68 19/10/2021
+        self.initialise_Kandor() #Kymera, for Raman with 785nm laser #jks68 19/10/2021
 ####end        
         self.radiantvoltages=None
 
@@ -269,16 +269,12 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             #self.AndorSpectrometer.light_shutter.open_shutter()
 #end of lab 3 experiment
             
-    def initialise_Shamdor(self):
-        self.myShamdor = Shamdor()
-        self.myShamdor.shamrock.SetSlit(100)
-#        self.myShamdor.use_shifts = True   #Uncomment For Raman Shift (Instead of Plotting with wavelength)
-        print('Shamdor initialised')
-
-    def initialise_Kandor(self):#jks68 19/10/2021
-        self.myKandor = Shamdor()#jks68 19/10/2021
-        self.myKandor.shamrock.SetSlit(100)#jks68 19/10/2021
-        print('Kymera initialised')#jks68 19/10/2021
+        
+#jks68 19/10/2021 start
+    def initialise_Kandor(self):
+        self.myKandor = Kandor()
+        print('Kymera initialised')
+#jks68 19/10/2021 end        
         
     def initialise_smu(self):
         self.smu = Keithley.get_instance(address = 'USB0::0x05E6::0x2634::4454529::INSTR')
@@ -321,6 +317,15 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             self.myShamdor.cooler = False
             print('Cooler OFF')
             
+#jks68 20/10/2021 start
+    def kandor_cooler(self):
+        if self.kandor_cooler_checkBox.isChecked():
+            self.myKandor.cooler = True
+            print('Cooler ON')
+        else:
+            self.myKandor.cooler = False
+            print('Cooler OFF')
+#jks68 20/10/2021 end          
     def set_shamrock_grating(self):
         self.myShamdor.shamrock.SetGrating(grating_num=int(self.TriaxGratingNumber_comboBox.currentText()))
         
@@ -330,10 +335,6 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     def set_shamrock_slit(self):
         self.myShamdor.shamrock.SetSlit(self.triaxSlit_spinBox.value())
         
-#    def initialise_Arduino(self):
-#        self.myArduino = arduinoLab3.ArduinoLab3()
-#        print('Arduino initialised')
-    
     def setup_plot_widgets(self):
         print('In development')
         self.electronics_plot = pg.PlotWidget()
@@ -405,13 +406,12 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         delattr(self,'SmarAct_stage')
         self.SmarAct_stage = SmaractMCSSerial('COM6',3)
         self.SmarAct_stage.show_gui(blocking=False)
-        
-        
-    def open_Andor_UI(self):
-        self.AndorControlUI = self.myShamdor.get_control_widget()
-        self.AndorPreviewUI = self.myShamdor.get_preview_widget()
-        self.AndorControlUI.show()
-        self.AndorPreviewUI.show()
+
+    def open_Kandor_UI(self):
+        self.KandorControlUI = self.myKandor.get_control_widget()
+        self.KandorPreviewUI = self.myKandor.get_preview_widget()
+        self.KandorControlUI.show()
+        self.KandorPreviewUI.show()
         
     def open_laser633_UI(self):
         self.laser633.show_gui()
