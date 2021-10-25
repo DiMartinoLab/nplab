@@ -80,7 +80,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 #        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
         self.initialise_shutter() #control box
 #        self.initialise_Shamdor() #Andor, for Raman and 633nm laser 
-#        self.initialise_Kandor() #Kymera, for Raman with 785nm laser #jks68 19/10/2021
+        self.initialise_Kandor() #Kymera, for Raman with 785nm laser #jks68 19/10/2021
 ####end        
         self.radiantvoltages=None
 
@@ -268,11 +268,10 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             self.smu.src_voltage=0 #added by sunny to turn off voltage after experiement finished
             #self.AndorSpectrometer.light_shutter.open_shutter()
 
-    def initialise_Shamdor(self):
-        self.myShamdor = Shamdor()
-        self.myShamdor.shamrock.SetSlit(100)
+    def initialise_Kandor(self):
+        self.myKandor = Kandor()
 #        self.myShamdor.use_shifts = True   #Uncomment For Raman Shift (Instead of Plotting with wavelength)
-        print('Shamdor initialised')
+        print('Kandor initialised')
 
     def initialise_smu(self):
         self.smu = Keithley.get_instance(address = 'USB0::0x05E6::0x2634::4454529::INSTR')
@@ -402,10 +401,9 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         
         
     def open_Andor_UI(self):
-        self.AndorControlUI = self.myShamdor.get_control_widget()
-        self.AndorPreviewUI = self.myShamdor.get_preview_widget()
-        self.AndorControlUI.show()
-        self.AndorPreviewUI.show()
+        self.myKandor.show_gui(block = False)
+#        self.gui_Kandor = self.myKandor.get_qt_ui()
+#        self.gui_Kandor.show()
         
     def open_laser633_UI(self):
         self.laser633.show_gui()

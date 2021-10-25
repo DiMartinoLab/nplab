@@ -290,8 +290,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     #    self.SmarAct_stage.mcs_id = self.SmarAct_stage.get_system_id()
         #print('mcs_id = ' + str(self.SmarAct_stage.mcs_id))
     def initialise_SMC100(self):
-        self.SMC100=SMC100('COM1', (1,2,3))
-#tu dodac 'idz do 6,6        
+        self.SMC100=SMC100('COM1', (1,2,3))        
         
     def initialise_shutter(self):
         self.myShutter = shutter(port = 'COM4')
