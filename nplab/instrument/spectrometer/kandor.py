@@ -4,15 +4,15 @@ Created on Sat Jul 08 19:47:22 2017
 
 @author: Hera
 """
-from nplab.instrument.camera.Andor import Andor
+from nplab.instrument.camera.Andor import Andor, AndorUI
 from nplab.instrument.spectrometer.Kymera import Kymera
-import numpy as np
+#import numpy as np
 class Kandor(Andor):
     ''' Wrapper class for the kymera and the andor
     '''
     
     def __init__(self, pixel_number=1024,
-                 pixel_width=256,
+                 pixel_width=26,
                  use_shifts=False, 
                  laser_wl=632.8,
                  white_shutter=None):
@@ -26,30 +26,26 @@ class Kandor(Andor):
         self.white_shutter = white_shutter
         self.metadata_property_names += ('slit_width', 'wavelengths')
         self.ImageFlip = 0
-    
-    def get_x_axis(self, use_shifts=None):
-        X = self.kymera.GetCalibration()
-        if all([not x for x in X]):# if the list is all 0s
-            X = range(len(X))
-        if self.use_shifts and use_shifts in [None, False]:
-            
-            wavelengths = np.array(X)
-            return ( 1./(self.laser_wl*1e-9)- 1./(wavelengths*1e-9))/100    
-        
-        return X
-    x_axis = property(get_x_axis)
-    
+
+    def get_x_axis(self):
+        return self.kymera.GetCalibration()[::-1]
+    x_axis = property(get_x_axis) #This is grabbed by the Andor code 
+
     @property
     def slit_width(self):
         return self.kymera.slit_width
     
     @property 
     def wavelengths(self):
-        return self.get_x_axis(use_shifts=False)
+        return self.get_x_axis()
+    
+    def Capture(_AndorUI):
+        _AndorUI.Andor.raw_image(update_latest_frame = True)
+    setattr(AndorUI, 'Capture', Capture)
 
 if __name__ == '__main__':
     k = Kandor()
     k.show_gui(block = False)
     ky = k.kymera
     ky.show_gui(block = False)
-    k.MultiTrack = (2, 3, 50)
+#    k.MultiTrack = (2, 3, 50)

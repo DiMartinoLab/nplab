@@ -4,17 +4,9 @@ Created on Jan 15 10:23:36 2019
 
 @author: Hera
 """
-#import nplab.datafile
-#from nplab.instrument.camera.Andor import Andor
-#from nplab.instrument.spectrometer.shamrock import Shamrock
-#from nplab.instrument.spectrometer.Triax.Trandor_Lab3 import Trandor
-
-#import sys
-#sys.path.insert(1, '../GitHub/nplab')
 
 import nplab
 
-from nplab.instrument.spectrometer.shamdor import Shamdor
 from nplab.instrument.spectrometer.kandor import Kandor#jks68 19/10/2021
 from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
 from nplab.instrument.electronics.keithley_2636b_smu import Keithley2636B as Keithley
@@ -74,13 +66,12 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         uic.loadUi('lab3_interface_sunny.ui', self)
         
 ###comment out software you are not going to use
-#        self.initialise_smu() #Keithley, for electrical measurements
+        self.initialise_smu() #Keithley, for electrical measurements
 #        self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
         self.initialise_SMC100() #actuators for xy stage
 #        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
         self.initialise_shutter() #control box
-#        self.initialise_Shamdor() #Andor, for Raman and 633nm laser 
-        self.initialise_Kandor() #Kymera, for Raman with 785nm laser #jks68 19/10/2021
+        self.initialise_Kandor() #Kymera, for Raman with 633nm or 785nm laser #jks68 19/10/2021
 ####end        
         self.radiantvoltages=None
 
@@ -94,7 +85,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.live_Raman_spectrum_signal.connect(self.update_Raman_spectrum_plot)
         self.live_electronic_signal.connect(self.update_electronic_plot)
         self.live_darkfield_spectrum_signal.connect(self.update_darkfield_spectrum_plot)
-        self.andor_cooler_checkBox.toggled.connect(self.andor_cooler)
+#        self.andor_cooler_checkBox.toggled.connect(self.andor_cooler)
         self.UploadFile.clicked.connect(self.processradiantfile)
         self.openstage.clicked.connect(self.open_SMC100_ui)
 #        self.myArduino.shutterIN() #To ensure shutter is closed
@@ -116,16 +107,14 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             if not self.mode_smuOnly.isChecked():
                 if (self.mode_RamanOnly.isChecked() or self.mode_RamanAndDarkfield.isChecked() ):
                     self.RamanSpectrumImagePlotData = []
-#                    self.RamanWavelengths = #instead of that: self.myShamdor.get_xaxis() which was giving wavelengths rotated around central wavelengths
-                    self.RamanWavelengths = self.AndorControlUI.Andor.x_axis#jks68 24/09/2021 if this is not working, just flip the above spectrum around 'spectrum'
+                    self.RamanWavelengths = self.myKandor.get_x_axis()
                     activeDatagroup.attrs.create('RamanWavelengths', self.RamanWavelengths)
-                    activeDatagroup.attrs.create('RamanBackground', self.AndorControlUI.Andor.background) #jks68 17/08/2021
+                    activeDatagroup.attrs.create('RamanBackground', self.KymeraControlUI.Andor.background) #jks68 17/08/2021
                     activeDatagroup.attrs.create('RamanIntegrationTime', self.RamanIntegrationTime)
-                    activeDatagroup.attrs.create('RamanSlit_um', self.myShamdor.shamrock.GetSlit())
-                    self.myShamdor.set_camera_parameter('Exposure', self.RamanIntegrationTime)
-                    self.myShamdor.AcquisitionMode = 1    # acquisition mode = 1 for single frame acquisition
-                    self.myShamdor.ReadMode = 3          # read mode = single track (reads centre_row +- num_rows). Output is one spectrum.
-                    self.myShamdor.set_camera_parameter('SingleTrack', self.centre_row, self.num_rows)
+                    self.myKandor.set_camera_parameter('Exposure', self.RamanIntegrationTime)
+                    self.myKandor.AcquisitionMode = 1    # acquisition mode = 1 for single frame acquisition
+                    self.myKandor.ReadMode = 3          # read mode = single track (reads centre_row +- num_rows). Output is one spectrum.
+                    self.myKandor.set_camera_parameter('SingleTrack', self.centre_row, self.num_rows)
                 if (self.mode_DarkfieldOnly.isChecked() or self.mode_RamanAndDarkfield.isChecked() ):
                     self.darkfieldSpectrumImagePlotData = []
                     self.darkfieldWavelengths = self.OOspectrometer.read_wavelengths()
@@ -267,15 +256,13 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             self.smu.output = 0
             self.smu.src_voltage=0 #added by sunny to turn off voltage after experiement finished
             #self.AndorSpectrometer.light_shutter.open_shutter()
+
 #end of lab 3 experiment
-            
-        
-#jks68 19/10/2021 start
+
     def initialise_Kandor(self):
         self.myKandor = Kandor()
-        print('Kymera initialised')
-#jks68 19/10/2021 end        
-        
+        print('Kymera initialised')     
+
     def initialise_smu(self):
         self.smu = Keithley.get_instance(address = 'USB0::0x05E6::0x2634::4454529::INSTR')
         self.smu.display = 0    # display current readings
@@ -285,17 +272,10 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.smu.src_current_limit = float(self.Ilimit_doubleSpinBox.value())
         
     def initialise_SmarAct_stage(self):
-# the next two lines initalize MCS with USB connection; not sure what the 3rd line (show_gui) is doing        
-       # SmarAct_system_id = SmaractMCS.find_mcs_systems()
         self.SmarAct_stage = SmaractMCSSerial('COM6',3)
-       # self.SmarAct_stage.show_gui(blocking=None)
-# the next lines initalize MCS device with RS232 interface
-        #self.SmarAct_stage = SmaractMCS('COM6')
-    #    self.SmarAct_stage.mcs_id = self.SmarAct_stage.get_system_id()
-        #print('mcs_id = ' + str(self.SmarAct_stage.mcs_id))
+
     def initialise_SMC100(self):
-        self.SMC100=SMC100('COM1', (1,2,3))
-#tu dodac 'idz do 6,6        
+        self.SMC100=SMC100('COM1', (1,2,3))     
         
     def initialise_shutter(self):
         self.myShutter = shutter(port = 'COM4')
@@ -308,35 +288,22 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     def initialise_laser633(self):
         self.laser633 = MatchboxLaser("COM3")
     
-    def andor_cooler(self):
-        if self.andor_cooler_checkBox.isChecked():
-            self.myShamdor.cooler = True
-            #self.myShamdor.cooler(True)
-            print('Cooler ON')
-        else:
-            self.myShamdor.cooler = False
-            print('Cooler OFF')
-            
-#jks68 20/10/2021 start
-    def kandor_cooler(self):
-        if self.kandor_cooler_checkBox.isChecked():
-            self.myKandor.cooler = True
-            print('Cooler ON')
-        else:
-            self.myKandor.cooler = False
-            print('Cooler OFF')
+#jks68 20/10/2021 start #CHECK WHETHER IT WORKS
+#    def kandor_cooler(self):
+#        if self.kandor_cooler_checkBox.isChecked():
+#            self.myKandor.cooler = True
+#            print('Cooler ON')
+#        else:
+#            self.myKandor.cooler = False
+#            print('Cooler OFF')
 #jks68 20/10/2021 end          
-    def set_shamrock_grating(self):
-        self.myShamdor.shamrock.SetGrating(grating_num=int(self.TriaxGratingNumber_comboBox.currentText()))
+    def set_kandor_grating(self):
+        self.myKandor.Kymera.SetGrating(grating_num=int(self.TriaxGratingNumber_comboBox.currentText()))
         
-    def set_shamrock_wavelength(self):
-        self.myShamdor.shamrock.SetWavelength(self.shamrockWavelength_spinBox.value())
-        
-    def set_shamrock_slit(self):
-        self.myShamdor.shamrock.SetSlit(self.triaxSlit_spinBox.value())
+    def set_kandor_wavelength(self):
+        self.myKandor.Kymera.SetWavelength(self.shamrockWavelength_spinBox.value())
         
     def setup_plot_widgets(self):
-        print('In development')
         self.electronics_plot = pg.PlotWidget()
         self.RamanSpectrum_plot = pg.PlotWidget()
         self.electronics_IVplot = pg.PlotWidget()
@@ -407,12 +374,9 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.SmarAct_stage = SmaractMCSSerial('COM6',3)
         self.SmarAct_stage.show_gui(blocking=False)
 
-    def open_Kandor_UI(self):
-        self.KandorControlUI = self.myKandor.get_control_widget()
-        self.KandorPreviewUI = self.myKandor.get_preview_widget()
-        self.KandorControlUI.show()
-        self.KandorPreviewUI.show()
-        
+    def open_Andor_UI(self):
+        self.myKandor.show_gui(block = False)
+     
     def open_laser633_UI(self):
         self.laser633.show_gui()
         
@@ -433,33 +397,27 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         
     
     def acquire_Raman_spectrum(self):
-        self.RamanSpectrum = np.asarray( self.myShamdor.capture()[0] )  # capture() retruns a tuple, converting to numpy array
+        self.RamanSpectrum = np.asarray( self.myKandor.capture()[0] )  # capture() retruns a tuple, converting to numpy array
         
     def acquire_darkfield_spectrum(self):
         self.darkfieldSpectrum = np.asarray(self.OOspectrometer.read_processed_spectrum())
         
-    def SmarAct_rotate_left(self):
-        
+    def SmarAct_rotate_left(self):   
         self.SmarAct_stage.close()  
         self.SmarAct_stage = SmaractMCSSerial('COM6',4)
         SmarAct_rotation_steps = int( float(self.SmarAct_rotation_degrees_comboBox.currentText()) /0.0031 )   # from rough calibration 1 slip-stick step = 0.0031deg
         self.SmarAct_stage.slip_stick_move(3, steps = -SmarAct_rotation_steps, amplitude=1800, frequency=1000)   # channel 3 is rotation stage, default values for amplitude and frequency)
         
     def SmarAct_rotate_right(self):
-      
         self.SmarAct_stage.close()
         self.SmarAct_stage = SmaractMCSSerial('COM6',4)
         SmarAct_rotation_steps = int( float(self.SmarAct_rotation_degrees_comboBox.currentText()) /0.0031 )
         self.SmarAct_stage.slip_stick_move(3, steps = SmarAct_rotation_steps, amplitude=1800, frequency=1000)
 
     def open_OO_spectrometer(self):
-#        self.OOspectrometer = OceanOpticsSpectrometer(0)
         self.gui_OOspectrometer= self.OOspectrometer.get_qt_ui()
         self.gui_OOspectrometer.show()
     
-#    def flipMirror(self):
-#        self.myArduino.mirrorFlip()
-    # TODO
     def flipShutter1(self):
         return
 
@@ -470,14 +428,14 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         return
     
     def acquire_single_Raman_spectrum(self):
-        self.myShamdor.set_camera_parameter('Exposure', self.RamanIntegrationTime)
-        self.myShamdor.AcquisitionMode = 1
-        self.myShamdor.ReadMode = 3
-        self.myShamdor.set_camera_parameter('SingleTrack', self.centre_row, self.num_rows)
-        self.myShamdor.shamrock.SetWavelength(self.shamrockWavelength_spinBox.value())
-        self.RamanWavelengths = self.AndorControlUI.Andor.x_axis #jks68 instead of 'self.myShamdor.get_xaxis()'
+        self.myKandor.set_camera_parameter('Exposure', self.RamanIntegrationTime)
+        self.myKandor.AcquisitionMode = 1
+        self.myKandor.ReadMode = 3
+        self.myKandor.set_camera_parameter('SingleTrack', self.centre_row, self.num_rows)
+        self.myKandor.kymera.SetWavelength(self.shamrockWavelength_spinBox.value())
+        self.RamanWavelengths = self.myKandor.get_x_axis()
         time.sleep(0.5)
-        self.RamanSpectrum = np.asarray( self.myShamdor.capture()[0] )
+        self.RamanSpectrum = np.asarray( self.myKandor.capture()[0] )
         self.RamanSpectrum_plot.plot(self.RamanWavelengths, clear = True, pen = 'r')#sunny added 'np.flip(self.RamanSpectrum)' to flip spectrum
         
     def save_single_Raman_spectrum(self):
@@ -485,12 +443,11 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         activeSingleRamanDataset.attrs.create("singleSpectrumDescription", str(self.single_Raman_spectrum_description))
         activeSingleRamanDataset.attrs.create("RamanWavelengths", self.RamanWavelengths)
         activeSingleRamanDataset.attrs.create('RamanIntegrationTime', self.RamanIntegrationTime)
-        activeSingleRamanDataset.attrs.create('RamanSlit_um', self.myShamdor.shamrock.GetSlit())
                 
     def shutdown(self):
         self.activeDatafile.close()
-        self.myShamdor.cooler = False
-        self.myShamdor.close()
+#        self.myKandor.cooler = False
+        self.myKandor.close()
         self.OOspectrometer.shutdown_seabreeze()
         print('----Experiment ended----')
         #TODO - closes any UI windows
