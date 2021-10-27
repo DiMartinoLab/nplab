@@ -6,6 +6,7 @@ Created on Sat Jul 08 19:47:22 2017
 """
 from nplab.instrument.camera.Andor import Andor, AndorUI
 from nplab.instrument.spectrometer.Kymera import Kymera
+from nplab.utils.notified_property import NotifiedProperty
 #import numpy as np
 class Kandor(Andor):
     ''' Wrapper class for the kymera and the andor
@@ -15,6 +16,7 @@ class Kandor(Andor):
                  pixel_width=26,
                  use_shifts=False, 
                  laser_wl=632.8,
+                 
                  white_shutter=None):
         
         super().__init__()
@@ -24,8 +26,10 @@ class Kandor(Andor):
         self.use_shifts = use_shifts
         self.laser_wl = laser_wl
         self.white_shutter = white_shutter
+        self.kymera.center_wavelength = 633.0
         self.metadata_property_names += ('slit_width', 'wavelengths')
         self.ImageFlip = 0
+        
 
     def get_x_axis(self):
         return self.kymera.GetCalibration()[::-1]

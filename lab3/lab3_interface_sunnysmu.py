@@ -4,13 +4,6 @@ Created on Jan 15 10:23:36 2019
 
 @author: Hera
 """
-#import nplab.datafile
-#from nplab.instrument.camera.Andor import Andor
-#from nplab.instrument.spectrometer.shamrock import Shamrock
-#from nplab.instrument.spectrometer.Triax.Trandor_Lab3 import Trandor
-
-#import sys
-#sys.path.insert(1, '../GitHub/nplab')
 
 import nplab
 
@@ -29,8 +22,6 @@ from nplab.experiment import Experiment, ExperimentStopped
 from nplab.utils.notified_property import DumbNotifiedProperty, NotifiedProperty
 from nplab.utils.gui import QtCore, QtGui, uic, get_qt_app
 from nplab.ui.ui_tools import UiTools
-#import Rotation_Stage as RS
-#import visa
 import os
 import time
 import threading
@@ -281,14 +272,8 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.smu.src_current_limit = float(self.Ilimit_doubleSpinBox.value())
         
     def initialise_SmarAct_stage(self):
-# the next two lines initalize MCS with USB connection; not sure what the 3rd line (show_gui) is doing        
-       # SmarAct_system_id = SmaractMCS.find_mcs_systems()
         self.SmarAct_stage = SmaractMCSSerial('COM6',3)
-       # self.SmarAct_stage.show_gui(blocking=None)
-# the next lines initalize MCS device with RS232 interface
-        #self.SmarAct_stage = SmaractMCS('COM6')
-    #    self.SmarAct_stage.mcs_id = self.SmarAct_stage.get_system_id()
-        #print('mcs_id = ' + str(self.SmarAct_stage.mcs_id))
+
     def initialise_SMC100(self):
         self.SMC100=SMC100('COM1', (1,2,3))
 #tu dodac 'idz do 6,6        

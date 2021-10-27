@@ -396,6 +396,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         else:
             attrs = dict()
         attrs['Description'] = self.description_plainTextEdit.toPlainText()
+        attrs['Exposure_time'] = self.Andor.Exposure
         if hasattr(self.Andor, 'x_axis'):
             attrs['wavelengths'] = self.Andor.x_axis
             

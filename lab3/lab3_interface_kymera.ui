@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1321</width>
+    <width>1132</width>
     <height>711</height>
    </rect>
   </property>
@@ -97,19 +97,32 @@
           <item>
            <widget class="QGroupBox" name="groupBox_3">
             <property name="title">
-             <string>GroupBox</string>
+             <string>GUIs for XYZ stage &amp; OO</string>
             </property>
             <widget class="QPushButton" name="openstage">
              <property name="geometry">
               <rect>
-               <x>60</x>
+               <x>40</x>
                <y>40</y>
                <width>161</width>
-               <height>71</height>
+               <height>41</height>
               </rect>
              </property>
              <property name="text">
               <string>Open Stage</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="open_OO_spectrometer_button">
+             <property name="geometry">
+              <rect>
+               <x>40</x>
+               <y>90</y>
+               <width>161</width>
+               <height>41</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Open OO spectrometer</string>
              </property>
             </widget>
            </widget>
@@ -124,7 +137,7 @@
               <rect>
                <x>10</x>
                <y>70</y>
-               <width>331</width>
+               <width>171</width>
                <height>20</height>
               </rect>
              </property>
@@ -152,19 +165,6 @@
              </property>
              <property name="text">
               <string>Laser Power Meter</string>
-             </property>
-            </widget>
-            <widget class="QPushButton" name="open_OO_spectrometer_button">
-             <property name="geometry">
-              <rect>
-               <x>20</x>
-               <y>90</y>
-               <width>131</width>
-               <height>23</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>Open OO spectrometer</string>
              </property>
             </widget>
             <widget class="QCheckBox" name="laser633_isON_checkbox">
@@ -203,7 +203,6 @@
              </property>
             </widget>
             <zorder>label_15</zorder>
-            <zorder>open_OO_spectrometer_button</zorder>
             <zorder>lineEdit</zorder>
             <zorder>laser633_isON_checkbox</zorder>
             <zorder>open_laser633_UI_button</zorder>
@@ -439,7 +438,7 @@
               <number>200</number>
              </property>
              <property name="value">
-              <number>100</number>
+              <number>128</number>
              </property>
             </widget>
            </item>
@@ -477,8 +476,11 @@
              <property name="minimum">
               <number>1</number>
              </property>
+             <property name="maximum">
+              <number>128</number>
+             </property>
              <property name="value">
-              <number>15</number>
+              <number>128</number>
              </property>
             </widget>
            </item>
@@ -534,7 +536,7 @@
               <number>1500</number>
              </property>
              <property name="value">
-              <number>690</number>
+              <number>633</number>
              </property>
             </widget>
            </item>
@@ -569,27 +571,15 @@
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
+             <property name="editable">
+              <bool>true</bool>
+             </property>
              <property name="currentIndex">
-              <number>2</number>
+              <number>0</number>
              </property>
              <item>
               <property name="text">
-               <string>None</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>0</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
                <string>1</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>2</string>
               </property>
              </item>
             </widget>
@@ -609,32 +599,6 @@
               </size>
              </property>
             </spacer>
-           </item>
-           <item>
-            <widget class="QPushButton" name="set_shamrock_slit_button">
-             <property name="text">
-              <string>Set Shamrock slit</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QSpinBox" name="triaxSlit_spinBox">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="suffix">
-              <string> µm</string>
-             </property>
-             <property name="minimum">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <number>1000</number>
-             </property>
-            </widget>
            </item>
           </layout>
          </item>
@@ -657,7 +621,7 @@
            <item>
             <widget class="QLineEdit" name="single_Raman_spectrum_description_lineEdit">
              <property name="text">
-              <string>single Raman spectrum description</string>
+              <string>...</string>
              </property>
             </widget>
            </item>
