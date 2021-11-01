@@ -48,6 +48,30 @@
                <string>Measurement type</string>
               </property>
               <layout class="QGridLayout" name="gridLayout_2">
+               <item row="3" column="0">
+                <widget class="QRadioButton" name="mode_PLOnly">
+                 <property name="text">
+                  <string>Photoluminescence only</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="4" column="0">
+                <widget class="QRadioButton" name="mode_RamanAndDarkfield">
+                 <property name="text">
+                  <string>Raman + Darkfield</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
+                <widget class="QRadioButton" name="mode_DarkfieldOnly">
+                 <property name="enabled">
+                  <bool>true</bool>
+                 </property>
+                 <property name="text">
+                  <string>Darkfield only</string>
+                 </property>
+                </widget>
+               </item>
                <item row="1" column="0">
                 <widget class="QRadioButton" name="mode_RamanOnly">
                  <property name="text">
@@ -65,30 +89,6 @@
                  </property>
                 </widget>
                </item>
-               <item row="2" column="0">
-                <widget class="QRadioButton" name="mode_DarkfieldOnly">
-                 <property name="enabled">
-                  <bool>true</bool>
-                 </property>
-                 <property name="text">
-                  <string>Darkfield only</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="4" column="0">
-                <widget class="QRadioButton" name="mode_RamanAndDarkfield">
-                 <property name="text">
-                  <string>Raman + Darkfield</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="0">
-                <widget class="QRadioButton" name="mode_PLOnly">
-                 <property name="text">
-                  <string>Photoluminescence only</string>
-                 </property>
-                </widget>
-               </item>
               </layout>
              </widget>
             </item>
@@ -97,32 +97,51 @@
           <item>
            <widget class="QGroupBox" name="groupBox_3">
             <property name="title">
-             <string>GUIs for XYZ stage &amp; OO</string>
+             <string>GUIs</string>
             </property>
             <widget class="QPushButton" name="openstage">
              <property name="geometry">
               <rect>
-               <x>40</x>
-               <y>40</y>
+               <x>60</x>
+               <y>20</y>
                <width>161</width>
-               <height>41</height>
+               <height>31</height>
               </rect>
              </property>
              <property name="text">
-              <string>Open Stage</string>
+              <string>Open XYZ Stage (motion)</string>
              </property>
             </widget>
             <widget class="QPushButton" name="open_OO_spectrometer_button">
              <property name="geometry">
               <rect>
-               <x>40</x>
-               <y>90</y>
+               <x>60</x>
+               <y>60</y>
                <width>161</width>
-               <height>41</height>
+               <height>31</height>
               </rect>
              </property>
              <property name="text">
-              <string>Open OO spectrometer</string>
+              <string>Open OceansOptics (DF/PL)</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="open_Andor_UI_button">
+             <property name="geometry">
+              <rect>
+               <x>60</x>
+               <y>100</y>
+               <width>161</width>
+               <height>31</height>
+              </rect>
+             </property>
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>Open Kymera (Raman)</string>
              </property>
             </widget>
            </widget>
@@ -334,7 +353,7 @@
       <item>
        <widget class="QGroupBox" name="groupBox_4">
         <property name="title">
-         <string>Andor and Shamrock settings</string>
+         <string>Kymera settings</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_11">
          <item>
@@ -497,19 +516,6 @@
              </property>
             </spacer>
            </item>
-           <item>
-            <widget class="QPushButton" name="open_Andor_UI_button">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>Open Kymera interface</string>
-             </property>
-            </widget>
-           </item>
           </layout>
          </item>
          <item>
@@ -523,7 +529,7 @@
               </sizepolicy>
              </property>
              <property name="text">
-              <string>Set Shamrock centre wavelength</string>
+              <string>Set centre wavelength</string>
              </property>
             </widget>
            </item>
@@ -559,7 +565,7 @@
            <item>
             <widget class="QPushButton" name="set_shamrock_grating_button">
              <property name="text">
-              <string>Set Shamrock grating number</string>
+              <string>Set grating number</string>
              </property>
             </widget>
            </item>

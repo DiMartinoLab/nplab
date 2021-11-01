@@ -62,7 +62,6 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     
     def __init__ (self, activeDatafile):
         super(Lab3_experiment, self).__init__()
-#        uic.loadUi('lab3_interface.ui', self)
         uic.loadUi('lab3_interface_kymera.ui', self)
         
 ###comment out software you are not going to use
@@ -112,9 +111,10 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
                     self.myKandor.set_camera_parameter('SingleTrack', self.centre_row, self.num_rows)
                     self.myKandor.set_camera_parameter('Exposure', self.RamanIntegrationTime)
                     self.RamanWavelengths = self.myKandor.get_x_axis()
+                    self.RamanBackground = self.KandorControlUI.Andor.background
                     
                     activeDatagroup.attrs.create('Raman_Wavelengths', self.RamanWavelengths)
-#                    activeDatagroup.attrs.create('Raman_Background', self.andor.background) #jks68 17/08/2021
+                    activeDatagroup.attrs.create('Raman_Background', self.RamanBackground)
                     activeDatagroup.attrs.create('Raman_Integration_Time', self.RamanIntegrationTime)
                     
                 if (self.mode_DarkfieldOnly.isChecked() or self.mode_RamanAndDarkfield.isChecked() ):
@@ -335,7 +335,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 
     def update_Raman_spectrum_plot(self, spectrum):
         self.RamanWavelengths = self.myKandor.get_x_axis()
-        self.RamanSpectrum_plot.plot(self.RamanWavelengths, clear = True, pen = 'r')  # plot current Raman spectrum in real time, ##sunny added 'np.flip(spectrum),' as the graph was flipped over the centralw wavelength
+        self.RamanSpectrum_plot.plot(self.RamanWavelengths, spectrum, clear = True, pen = 'r')  # plot current Raman spectrum in real time, ##sunny added 'np.flip(spectrum),' as the graph was flipped over the centralw wavelength
         self.RamanSpectrumImagePlotData.append(spectrum)     # plot Raman spectra over time as image plot        
         self.RamanImagePlotItem.setImage(np.asarray(self.RamanSpectrumImagePlotData))
                
@@ -352,8 +352,6 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             self.voltages_data = [voltagePlotInput]
             self.currents_data = [currentPlotInput]
 #            self.capacitance_data = [0]
-            
-        
         else:
             self.times_data.append(timePlotInput)
             self.voltages_data.append(voltagePlotInput)
@@ -378,8 +376,12 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.SmarAct_stage.show_gui(blocking=False)
 
     def open_Andor_UI(self):
-        self.KandorControlUI = self.myKandor.show_gui(block = False)
-     
+#        self.KandorControlUI = self.myKandor.show_gui(block = False)
+        self.KandorControlUI = self.myKandor.get_control_widget()
+        self.KandorPreviewUI = self.myKandor.get_preview_widget()
+        self.KandorControlUI.show()
+        self.KandorPreviewUI.show()
+
     def open_laser633_UI(self):
         self.laser633.show_gui()
         
@@ -437,17 +439,19 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.myKandor.set_camera_parameter('SingleTrack', self.centre_row, self.num_rows)
         self.myKandor.kymera.SetWavelength(self.shamrockWavelength_spinBox.value())
         self.RamanWavelengths = self.myKandor.get_x_axis()
-#        self.RamanBackgroud = self.myKandor.Andor.background
-        
+        self.RamanBackground = self.KandorControlUI.Andor.background
+    
         time.sleep(0.5)
         self.RamanSpectrum = np.asarray( self.myKandor.capture()[0] )
-        self.RamanSpectrum_plot.plot(self.RamanWavelengths, clear = True, pen = 'r')
+        self.RamanSpectrum_plot.plot(self.RamanWavelengths, self.RamanSpectrum, clear = True, pen = 'r')
         
     def save_single_Raman_spectrum(self):
         activeSingleRamanDataset = self.singleRamanSpectraGroup.create_dataset('singleRamanSpectrum_%d', data = self.RamanSpectrum)
         activeSingleRamanDataset.attrs.create("Description", str(self.single_Raman_spectrum_description))
         activeSingleRamanDataset.attrs.create("Raman_Wavelengths", self.RamanWavelengths)
         activeSingleRamanDataset.attrs.create('Raman_Integration_Time', self.RamanIntegrationTime)
+        activeSingleRamanDataset.attrs.create('Raman_Background', self.RamanBackground)
+
                 
     def shutdown(self):
         self.activeDatafile.close()

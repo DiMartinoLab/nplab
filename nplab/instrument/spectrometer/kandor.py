@@ -20,7 +20,7 @@ class Kandor(Andor):
                  white_shutter=None):
         
         super().__init__()
-        self.kymera = Kymera()
+        self.kymera = Kymera()        
         self.kymera.pixel_number = pixel_number
         self.kymera.pixel_width = pixel_width
         self.use_shifts = use_shifts
@@ -34,7 +34,7 @@ class Kandor(Andor):
     def get_x_axis(self):
         return self.kymera.GetCalibration()[::-1]
     x_axis = property(get_x_axis) #This is grabbed by the Andor code 
-
+    
     @property
     def slit_width(self):
         return self.kymera.slit_width
