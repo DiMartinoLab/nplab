@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWidget</class>
+ <widget class="QWidget" name="MainWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>484</width>
+    <height>711</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="2" column="0">
+    <widget class="QPushButton" name="shutdown_button">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Shut down</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QWidget" name="verticalWidget" native="true">
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="spacing">
+       <number>20</number>
+      </property>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_8">
+          <property name="spacing">
+           <number>2</number>
+          </property>
+          <item>
+           <widget class="QGroupBox" name="groupBox_3">
+            <property name="title">
+             <string>PL mapping</string>
+            </property>
+            <widget class="QLabel" name="label_18">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>20</y>
+               <width>166</width>
+               <height>29</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>File name:</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="single_Raman_spectrum_description_lineEdit">
+             <property name="geometry">
+              <rect>
+               <x>70</x>
+               <y>40</y>
+               <width>161</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>...</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="acquire_single_Raman_spectrum_button">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>130</y>
+               <width>211</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>START SCAN (saved automatically)</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="acquire_single_Raman_spectrum_button_2">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>80</y>
+               <width>211</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Acquire single PL spectrum</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="acquire_single_Raman_spectrum_button_3">
+             <property name="geometry">
+              <rect>
+               <x>220</x>
+               <y>80</y>
+               <width>211</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Save single PL</string>
+             </property>
+            </widget>
+            <widget class="QLabel" name="label_19">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>40</y>
+               <width>166</width>
+               <height>29</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Description</string>
+             </property>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QGridLayout" name="plotGrid">
+        <item row="2" column="0">
+         <widget class="QWidget" name="PLmap" native="true"/>
+        </item>
+        <item row="0" column="0" rowspan="2">
+         <widget class="QWidget" name="singlePL" native="true">
+          <widget class="QLabel" name="label_22">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>-30</y>
+             <width>61</width>
+             <height>75</height>
+            </rect>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>75</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>DarkField</string>
+           </property>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

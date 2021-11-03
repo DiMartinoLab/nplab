@@ -62,15 +62,15 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     
     def __init__ (self, activeDatafile):
         super(Lab3_experiment, self).__init__()
-        uic.loadUi('lab3_interface_kymera.ui', self)
+        uic.loadUi('lab3_interface_kymera_PL_mapping.ui', self)
         
 ###comment out software you are not going to use
-        self.initialise_smu() #Keithley, for electrical measurements
+#        self.initialise_smu() #Keithley, for electrical measurements
 #        self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
         self.initialise_SMC100() #actuators for xy stage
-#        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
+        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
         self.initialise_shutter() #control box
-        self.initialise_Kandor() #Kymera, for Raman with 633nm or 785nm laser #jks68 19/10/2021
+#        self.initialise_Kandor() #Kymera, for Raman with 633nm or 785nm laser #jks68 19/10/2021
 ####end        
         self.radiantvoltages=None
 
@@ -165,22 +165,6 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
                 #spectrum = self.spectrometer.read_spectrum(bundle_metadata=True)
                 if self.mode_smuOnly.isChecked():
                     self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
-                else:
-                    
-                    #TODO:
-                    # for raman series: check mirror position
-                    # put in DF configuration
-                        # mirror in DF
-                        # open shutter white light
-                        # close andor shutter (not needed)
-                        # take one DF spectrum
-                    # put in raman configuration
-                        # mirror in raman
-                        # close shutter white light
-                        # open andor shutter
-                        # take raman, save
-                    # put in DF configuration and save as DF final
-                    
                     if (self.mode_RamanOnly.isChecked()):
                         RamanSpectrum_thread = threading.Thread(target = self.acquire_Raman_spectrum )    # acquiring Raman spectrum in new thread
                         RamanSpectrum_thread.start()
@@ -261,6 +245,90 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             #self.AndorSpectrometer.light_shutter.open_shutter()
 
 #end of lab 3 experiment
+#PL mapping
+     def run(self, *args):
+        # *args collects extra unnecessary arguments from qt
+        self.voltages_data = []
+        self.times_data = []
+        stepwiseCounter = 1
+        rampCounter = 1
+        runningRampInterval = False
+        try:
+            activeDatagroup = self.create_data_group('scan_%d')
+            activeDatagroup.attrs.create('description', str(self.description))
+            if not self.mode_smuOnly.isChecked():
+                if (self.mode_RamanOnly.isChecked() or self.mode_RamanAndDarkfield.isChecked() ):
+                    self.RamanSpectrumImagePlotData = []
+                    self.myKandor.AcquisitionMode = 1    # acquisition mode = 1 for single frame acquisition
+                    self.myKandor.ReadMode = 3          # read mode = single track (reads centre_row +- num_rows). Output is one spectrum.
+                    self.myKandor.set_camera_parameter('SingleTrack', self.centre_row, self.num_rows)
+#                    self.myKandor.set_camera_parameter('Exposure', self.RamanIntegrationTime)
+                    self.RamanWavelengths = self.myKandor.get_x_axis()
+#                    self.RamanWavelengths = self.KandorControlUI.Andor.x_axis
+                    self.RamanBackground = self.KandorControlUI.Andor.background
+                    
+                    activeDatagroup.attrs.create('Raman_Wavelengths', self.RamanWavelengths)
+                    activeDatagroup.attrs.create('Raman_Background', self.RamanBackground)
+                    activeDatagroup.attrs.create('Raman_Integration_Time', self.RamanIntegrationTime)
+                    
+                if (self.mode_DarkfieldOnly.isChecked() or self.mode_RamanAndDarkfield.isChecked() ):
+                    self.darkfieldSpectrumImagePlotData = []
+                    self.darkfieldWavelengths = self.OOspectrometer.read_wavelengths()
+                    activeDatagroup.attrs.create('DarkfieldWavelengths', self.darkfieldWavelengths)
+                    activeDatagroup.attrs.create('DarkfieldBackground', self.OOspectrometer.background)
+                    activeDatagroup.attrs.create('DarkfieldReference', self.OOspectrometer.reference)
+                    activeDatagroup.attrs.create('DarkfieldIntegrationTime', self.OOspectrometer.get_integration_time())
+                    activeDatagroup.attrs.create('DarkfieldBackground_Reference', self.OOspectrometer.background_ref)
+                    activeDatagroup.attrs.create('DarkfieldBackground_ReferenceIntegrationTime', self.OOspectrometer.background_int_ref)                    
+                    #TEST BY THOMAS
+                    #adding attributes for DF in-situ measurements
+                    activeDatagroup.attrs.create('DarkfieldReferenceIntegrationTime', self.OOspectrometer.reference_int)
+                    activeDatagroup.attrs.create('DarkfieldBackgroundIntegrationTime', self.OOspectrometer.background_int)
+                if (self.mode_PLOnly.isChecked()):
+                    self.darkfieldSpectrumImagePlotData = []
+                    self.darkfieldWavelengths = self.OOspectrometer.read_wavelengths()
+                    activeDatagroup.attrs.create('PLWavelengths', self.darkfieldWavelengths)
+                    activeDatagroup.attrs.create('PLBackground', self.OOspectrometer.background)
+                    activeDatagroup.attrs.create('PLIntegrationTime', self.OOspectrometer.get_integration_time())
+            
+            #TEST BY THOMAS
+            #adding attributes for electrical measurements
+            activeDatagroup.attrs.create('CurrentRange', self.smu.meas_current_range)
+            activeDatagroup.attrs.create('CurrentLimit', self.smu.src_current_limit)
+            try:
+                activeDatagroup.attrs.create('VoltageProfilePts', self.radiantnopoints)
+            except:
+                print('No voltage profile uploaded!')
+            
+            activeVoltage = 0.0
+            rampActiveVoltage = 0.0
+            self.voltageRampSign = 1
+            self.smu.output = 1
+            self.smu.delay = 0
+            t0 = time.time()
+            print("----- Measurement started -----")
+            n=0
+            while True:
+                self.smu.src_voltage = activeVoltage
+                #spectrum = self.spectrometer.read_spectrum(bundle_metadata=True)
+                if self.mode_smuOnly.isChecked():
+                    self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
+
+                    if (self.mode_PLOnly.isChecked()):
+                        DarkfieldSpectrum_thread = threading.Thread(target = self.acquire_darkfield_spectrum )    # acquiring Raman spectrum in new thread
+                        DarkfieldSpectrum_thread.start()
+                        spectraActiveTime = (time.time()-t0)
+                        activeDatagroup.append_dataset("PLSpectra_times", spectraActiveTime)
+                        while DarkfieldSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
+                            self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
+                        self.live_darkfield_spectrum_signal.emit(self.darkfieldSpectrum)
+                        activeDatagroup.append_dataset("PLSpectrum", self.darkfieldSpectrum)
+        except ExperimentStopped:
+            print("----- Measurement stopped -----")
+        finally:
+            self.activeDatafile.flush()      
+            
+#PL mapping end
 
     def initialise_Kandor(self):
         self.myKandor = Kandor()
@@ -388,6 +456,9 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.laser633.show_gui()
         
     def open_SMC100_ui(self):
+        self.SMC100.show_gui()
+
+    def open_PLmapping_ui(self):
         self.SMC100.show_gui()
         
     def acquireIVdatapoint(self, activeVoltage, t0, activeDatagroup):
