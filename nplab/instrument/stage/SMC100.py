@@ -314,7 +314,7 @@ class SMC100(SerialInstrument, Stage):
 
         self._send_cmd('BA', 1, '0.00760') #added by Asia - backlash values, printed on actuators
         self._send_cmd('BA', 2, '0.00844') #added by Asia - backlash values, printed on actuators
-        self._send_cmd('BA', 3, '0.01936') #added by Asia - backlash values, printed on actuators
+        self._send_cmd('BA', 3, '0.02236') #added by Asia - backlash values, printed on actuators, added +10um 23/11
         
         # exit configuration mode
         self._send_cmd('PW0', 1)
