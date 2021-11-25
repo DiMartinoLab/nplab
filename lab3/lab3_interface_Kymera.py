@@ -67,10 +67,10 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 ###comment out software you are not going to use
         self.initialise_smu() #Keithley, for electrical measurements
 #        self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
-        self.initialise_SMC100() #actuators for xy stage
+#        self.initialise_SMC100() #actuators for xy stage
 #        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
-        self.initialise_shutter() #control box
-        self.initialise_Kandor() #Kymera, for Raman with 633nm or 785nm laser #jks68 19/10/2021
+#        self.initialise_shutter() #control box
+#        self.initialise_Kandor() #Kymera, for Raman with 633nm or 785nm laser #jks68 19/10/2021
 ####end        
         self.radiantvoltages=None
 
@@ -160,7 +160,9 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             t0 = time.time()
             print("----- Measurement started -----")
             n=0
-            while True:
+            
+            actively_measuring = True
+            while actively_measuring:
                 self.smu.src_voltage = activeVoltage
                 #spectrum = self.spectrometer.read_spectrum(bundle_metadata=True)
                 if self.mode_smuOnly.isChecked():
@@ -242,13 +244,17 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
                         #self.smu_wait = self.radianttimedelay*0.001
                         time.sleep((1/(40*self.Vlow) - 1/40)) #DLCC
                         if type(self.radiantvoltages)==np.ndarray:
-                            if n==self.radiantnopoints:
-                                pass
-                            activeVoltage = self.Vhigh * self.radiantvoltages[n]/100
-                            n+=1
-                            
+                            if n<self.radiantnopoints:
+                                #raise ExperimentStopped()
+                                activeVoltage = self.Vhigh * self.radiantvoltages[n]/100
+                                n+=1
+                            else:
+                                actively_measuring = False
+                                print("----- Voltage Profile Finished -----")
+                                self.activeDatafile.flush()
                         else:
                             print('no file selected')
+                            activeVoltage = 0
                             pass
                 self.wait_or_stop(self.smu_wait)
                 
@@ -469,15 +475,18 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     
     def processradiantfile(self):
         #f= open("DLCC.txt", "r")
-        f= open("1000Hz_0.0010ramp 0.0010delay.txt", "r") #normal PUND with large gaps between pulses
+        #f= open("1000Hz_0.0010ramp 0.0010delay.txt", "r") #normal PUND with large gaps between pulses
         #f= open("constant-voltage-profile.txt", "r")
         #f = open("Thomas_shorter-PUND.txt", "r") #shorter PUND that reduces 0V gaps
+        v_profile_name = "1000Hz_0.0010ramp 0.0010delay.txt"
+        f= open(v_profile_name, "r")
         self.radiantnopoints = int(f.readline()[:-1]) #first line describes how many points there are.
         self.radianttimedelay = float(f.readline()[:-1]) #second line describes time delay in ms
         self.radiantvoltages = np.zeros(self.radiantnopoints)
         for x in range(self.radiantnopoints):
             self.radiantvoltages[x] = float(f.readline()[:-1])
         f.close()
+        print('-----voltage profile ' + v_profile_name + ' successfully uploaded-----')
         
 
 

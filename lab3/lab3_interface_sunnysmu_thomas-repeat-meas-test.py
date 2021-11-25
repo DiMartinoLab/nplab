@@ -76,7 +76,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         uic.loadUi('lab3_interface_sunny_thomas-edit.ui', self)
         
 ###comment out software you are not going to use
-#        self.initialise_smu() #Keithley, for electrical measurements
+        self.initialise_smu() #Keithley, for electrical measurements
 #        self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
 #        self.initialise_SMC100() #actuators for xy stage
         self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
@@ -269,6 +269,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
                                     self.activeDatafile.flush()
                             else:
                                 print('no file selected')
+                                activeVoltage = 0
                                 pass
                     self.wait_or_stop(self.smu_wait)
                     
@@ -507,15 +508,18 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     
     def processradiantfile(self):
         #f= open("DLCC.txt", "r")
-        f= open("1000Hz_0.0010ramp 0.0010delay.txt", "r") #normal PUND with large gaps between pulses
+        #f= open("1000Hz_0.0010ramp 0.0010delay.txt", "r") #normal PUND with large gaps between pulses
         #f= open("constant-voltage-profile.txt", "r")
         #f = open("Thomas_shorter-PUND.txt", "r") #shorter PUND that reduces 0V gaps
+        v_profile_name = "1000Hz_0.0010ramp 0.0010delay.txt"
+        f= open(v_profile_name, "r")
         self.radiantnopoints = int(f.readline()[:-1]) #first line describes how many points there are.
         self.radianttimedelay = float(f.readline()[:-1]) #second line describes time delay in ms
         self.radiantvoltages = np.zeros(self.radiantnopoints)
         for x in range(self.radiantnopoints):
             self.radiantvoltages[x] = float(f.readline()[:-1])
         f.close()
+        print('-----voltage profile ' + v_profile_name + ' successfully uploaded-----')
         
 
 
