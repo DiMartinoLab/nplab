@@ -221,10 +221,24 @@
               <string>Laser Power</string>
              </property>
             </widget>
+            <widget class="QPushButton" name="z_stack">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>100</y>
+               <width>75</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Z stack</string>
+             </property>
+            </widget>
             <zorder>label_15</zorder>
             <zorder>lineEdit</zorder>
             <zorder>laser633_isON_checkbox</zorder>
             <zorder>open_laser633_UI_button</zorder>
+            <zorder>z_stack</zorder>
            </widget>
           </item>
           <item>

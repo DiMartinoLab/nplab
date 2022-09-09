@@ -15,6 +15,8 @@ import time
 
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.stage import Stage
+from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
+#pyplot? panda?
 
 # never wait for more than this e.g. during wait_states
 MAX_WAIT_TIME_SEC = 300
@@ -62,7 +64,7 @@ class SMC100InvalidResponseException(Exception):
         super(SMC100InvalidResponseException, self).__init__(s)
 
 
-class SMC100(SerialInstrument, Stage):
+class z_stack(SerialInstrument, Stage):
     """
     Class to interface with Newport's SMC100 controller.
     The SMC100 accepts commands in the form of:
@@ -433,210 +435,6 @@ class SMC100(SerialInstrument, Stage):
         
     # def get_qt_ui(self):
     #     return SMC100UI(self)
-
-
-# class SMC1002axis(instruments.InstrumentBase):
-#     metadata = {'software_home', 'CurPos'}
-#
-#     def get_single_metadata(self, name):
-#         if name == 'CurPos':
-#             self.get_position_mm()
-#         return getattr(self, name)
-#
-#     def __init__(self, port, backlash_compensation=True, sleepfunc=None, **kwargs):
-#         instruments.InstrumentBase.__init__(self, **kwargs)
-#
-#         self.axisV = SMC100(1, port, backlash_compensation, sleepfunc, **kwargs)
-#         self.axisH = SMC100(2, self.axisV._port, backlash_compensation, sleepfunc, **kwargs)
-#
-#         self.axisH._port = self.axisV._port
-#
-#         self.software_home = (0, 0)
-#         self.CurPos = (0, 0)
-#
-#     def __del__(self):
-#         del self.axisH
-#         del self.axisV
-#
-#     def set_software_home(self, home_val=None):
-#         # if home_val is None:
-#         #     self.axisH.set_software_home()
-#         #     time.sleep(0.1)
-#         #     self.axisV.set_software_home()
-#         # else:
-#         #     self.axisH.software_home = home_val[1]
-#         #     self.axisV.software_home = home_val[0]
-#         self.software_home = self.get_position_mm()
-#         self.axisV.software_home = self.software_home[0]
-#         self.axisH.software_home = self.software_home[1]
-#         # self.software_home = (self.axisV.software_home, self.axisH.software_home)
-#
-#     def go_software_home(self):
-#         self.move_absolute_mm(self.software_home)
-#         # self.axisV.move_absolute_mm(self.software_home[0])
-#         # time.sleep(0.1)
-#         # self.axisH.move_absolute_mm(self.software_home[1])
-#         #
-#         # self.get_position_mm()
-#
-#     def home(self, waitStop=True):
-#         self.axisH.home(waitStop)
-#         self.axisV.home(waitStop)
-#
-#         self.get_position_mm()
-#
-#     def move_absolute_mm(self, (vertPos, horzPos), waitStop=True):
-#         self.CurPos = (vertPos, horzPos)
-#
-#         self.axisV.move_absolute_mm(vertPos, waitStop=False)
-#         time.sleep(0.1)
-#         self.axisH.move_absolute_mm(horzPos, waitStop=False)
-#
-#         if waitStop:
-#             self.axisH._wait_states((STATE_READY_FROM_MOVING, STATE_READY_FROM_HOMING))
-#             self.axisV._wait_states((STATE_READY_FROM_MOVING, STATE_READY_FROM_HOMING))
-#         self.updateGUI.emit()
-#
-#     def move_abs_homed_mm(self, (vertPos, horzPos), waitStop=True):
-#         """
-#         :param (vertPos, horzPos):
-#         :param waitStop:
-#         :return:
-#         """
-#         self.CurPos = (vertPos, horzPos)
-#
-#         self.axisV.move_abs_homed_mm(vertPos, waitStop=False)
-#         time.sleep(0.1)
-#         self.axisH.move_abs_homed_mm(horzPos, waitStop=False)
-#
-#         if waitStop:
-#             self.axisH._wait_states((STATE_READY_FROM_MOVING, STATE_READY_FROM_HOMING))
-#             self.axisV._wait_states((STATE_READY_FROM_MOVING, STATE_READY_FROM_HOMING))
-#         self.updateGUI.emit()
-#
-#     def move_relative_mm(self, (vertPos, horzPos), waitStop=True):
-#         self.CurPos = (vertPos, horzPos)
-#
-#         self.axisV.move_relative_mm(vertPos, waitStop=False)
-#         time.sleep(0.1)
-#         self.axisH.move_relative_mm(horzPos, waitStop=False)
-#         time.sleep(0.1)
-#
-#         if waitStop:
-#             self.axisH._wait_states((STATE_READY_FROM_MOVING, STATE_READY_FROM_HOMING))
-#             self.axisV._wait_states((STATE_READY_FROM_MOVING, STATE_READY_FROM_HOMING))
-#         self.updateGUI.emit()
-#
-#     def get_position_mm(self):
-#         posV = self.axisV.get_position_mm()
-#         time.sleep(0.1)
-#         posH = self.axisH.get_position_mm()
-#
-#         self.CurPos = (posV, posH)
-#
-#         self.updateGUI.emit()
-#         return (posV, posH)
-#
-#     def find_image(self, edge_image, start=None):
-#         raise NotImplementedError
-#         if start is not None:
-#             self.axisV.move_absolute_mm(start[0])
-#             self.axisH.move_absolute_mm(start[1])
-#
-#             # Move horizontally until we get to an edge
-#             # Move upwards until we get to the image
-#
-#             # To do:
-#             # Figure out how to detect whether we are at an edge
-#             # Figure out how to refocus at each sample position
-#             # Figure out if cross-correlation can work for centering the image, and calibrate the stage movement to the camera
-#
-#     def get_qt_ui(self):
-#         return SMC100UI(self)
-
-
-# class SMC100UI(QtWidgets.QWidget):
-#     def __init__(self, smc100):
-#         if isinstance(smc100, SMC100):
-#             self.axes = False
-#         elif isinstance(smc100, SMC1002axis):
-#             self.axes = True
-#         else:
-#             raise AssertionError("instrument must be a SMC100")
-#
-#         super(SMC100UI, self).__init__()
-#
-#         self.SMC100 = smc100
-#         self.signal = QtCore.SIGNAL('SMC100GUIupdate')
-#         self.SolsTiSMonitorThread = None
-#         self.stepSize = 100
-#
-#         if self.axes:
-#             uic.loadUi(os.path.join(os.path.dirname(__file__), 'uiFiles/smc1002axes.ui'), self)
-#             self.lineEditHorzPos.returnPressed.connect(lambda: self.PosChanged())
-#             self.lineEditVertPos.returnPressed.connect(lambda: self.PosChanged())
-#
-#             self.lineEditStepSize.returnPressed.connect(self.StepSizeChanged)
-#             self.pushButtonLeft.clicked.connect(lambda: self.Move(dir='l'))
-#             self.pushButtonRight.clicked.connect(lambda: self.Move(dir='r'))
-#             self.pushButtonUp.clicked.connect(lambda: self.Move(dir='u'))
-#             self.pushButtonDown.clicked.connect(lambda: self.Move(dir='d'))
-#
-#             self.pushButtonGoHome.clicked.connect(self.GoSoftwareHome)
-#             self.pushButtonSetHome.clicked.connect(self.SetSoftwareHome)
-#         else:
-#             uic.loadUi(os.path.join(os.path.dirname(__file__), 'uiFiles/SMC100.ui'), self)
-#             self.lineEditPos.returnPressed.connect(self.PosChanged)
-#
-#         self.SMC100.updateGUI.connect(self.updateGUI)
-#
-#     def updateGUI(self):
-#         if self.axes:
-#             horz_pos = self.SMC100.axisH.get_position_mm()
-#             vert_pos = self.SMC100.axisV.get_position_mm()
-#             self.lineEditHorzPos.setText(str(float('%.3f' % horz_pos)).rstrip('0'))
-#             self.lineEditVertPos.setText(str(float('%.3f' % vert_pos)).rstrip('0'))
-#         else:
-#             pos = self.SMC100.get_position_mm()
-#             self.lineEditPos.setText(str(pos))
-#
-#     def PosChanged(self):
-#         if self.axes:
-#             horz_pos = float(self.lineEditHorzPos.text())
-#             vert_pos = float(self.lineEditVertPos.text())
-#
-#             self.SMC100.move_absolute_mm((vert_pos, horz_pos))
-#         else:
-#             pos = float(self.lineEditPos.text())
-#             self.SMC100.move_absolute_mm(pos)
-#
-#     def StepSizeChanged(self):
-#         self.stepSize = float(self.lineEditStepSize.text())
-#
-#     def Move(self, dir):
-#         if dir == 'l':
-#             # self.SMC100.axisH.move_relative_um(self.stepSize)
-#             self.SMC100.move_relative_mm((0, self.stepSize * 1e-3))
-#         if dir == 'r':
-#             # self.SMC100.axisH.move_relative_um(-self.stepSize)
-#             self.SMC100.move_relative_mm((0, -self.stepSize * 1e-3))
-#         if dir == 'u':
-#             # self.SMC100.axisV.move_relative_um(self.stepSize)
-#             self.SMC100.move_relative_mm((self.stepSize * 1e-3, 0))
-#         if dir == 'd':
-#             # self.SMC100.axisV.move_relative_um(-self.stepSize)
-#             self.SMC100.move_relative_mm((-self.stepSize * 1e-3, 0))
-#
-#     def SetSoftwareHome(self):
-#         self.SMC100.set_software_home()
-#
-#     def GoSoftwareHome(self):
-#         self.SMC100.go_software_home()
-
-
-# Tests #####################################################################
-
-
 
 if __name__ == '__main__':
     smc100 = SMC100('COM1', (1,2,3))

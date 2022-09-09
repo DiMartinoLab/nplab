@@ -66,7 +66,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         super(Lab3_experiment, self).__init__()
         uic.loadUi('lab3_interface.ui', self)
 
-        self.initialise_Shamdor()
+#        self.initialise_Shamdor()
         self.initialise_smu()
 #        self.initialise_SmarAct_stage()
  #       self.initialise_shutter()
@@ -129,7 +129,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             self.voltageRampSign = 1
             self.smu.output = 1
             t0 = time.time()
-            print "----- Measurement started -----"
+            print("----- Measurement started -----")
             
             while True:
                 self.smu.src_voltage = activeVoltage
@@ -192,7 +192,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
                 self.wait_or_stop(self.smu_wait)
                 
         except ExperimentStopped:
-            print "----- Measurement stopped -----"
+            print("----- Measurement started -----")
         finally:
             self.activeDatafile.flush()
             self.smu.output = 0

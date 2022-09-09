@@ -359,7 +359,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
         self.update_positions
         
     def z_focus_travel(self):
-        self.move_axis_absolute(15.3333, '3')
+        self.move_axis_absolute(8.4, '3')
         self.update_positions
 #added by Asia end
             

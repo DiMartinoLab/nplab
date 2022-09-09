@@ -10,7 +10,7 @@ import nplab
 from nplab.instrument.spectrometer.shamdor import Shamdor
 from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
 from nplab.instrument.electronics.keithley_2636b_smu import Keithley2636B as Keithley
-from nplab.instrument.stage.smaract_mcs import SmaractMCSSerial
+#from nplab.instrument.stage.smaract_mcs import SmaractMCSSerial
 from nplab.instrument.shutter.Arduino_ttl_shutter import Arduino_tri_shutter as shutter
 from nplab.instrument.light_sources.matchbox_laser import MatchboxLaser
 
@@ -64,12 +64,12 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         uic.loadUi('lab3_interface_sunny.ui', self)
         
 ###comment out software you are not going to use
-        self.initialise_smu() #Keithley, for electrical measurements
-        self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
-        self.initialise_SMC100() #actuators for xy stage
+#        self.initialise_smu() #Keithley, for electrical measurements
+#        self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
+#        self.initialise_SMC100() #actuators for xy stage
         self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
 #        self.initialise_Shamdor() #Andor, for Raman and 633nm laser 
-        self.initialise_shutter() #control box
+#        self.initialise_shutter() #control box
 ####end        
         self.radiantvoltages=None
 

@@ -27,7 +27,6 @@ import os
 import inspect
 import datetime
 from nplab.instrument import Instrument
-from nplab.instrument.stage import Stage
 import warnings
 import pyqtgraph as pg
 from weakref import WeakSet
@@ -74,10 +73,6 @@ class Spectrometer(Instrument):
         self.num_spectra = 1
         self.delay = 0
         self.time_series_name = 'time_series_%d'
-
-        #dmk50 Aug 2022 implementing zstack button
-        self.z_stack_spectra = None
-        self.z_stack_opt_int = None
 
 
     def __del__(self):
@@ -163,12 +158,12 @@ class Spectrometer(Instrument):
             background_1 = np.average(self.read_averaged_spectrum(True,True),axis=0)
         else:
             background_1 = self.read_spectrum()
-        self.integration_time = 2.0*self.integration_time
+        self.integration_time = 2.0*self.integration_time#jks68 24/6/2022 deleted 28 in front of self.integration_time
         if self.averaging_enabled == True:
             background_2 = np.average(self.read_averaged_spectrum(True,True),axis=0)
         else:
             background_2 = self.read_spectrum()
-        self.integration_time = self.integration_time/2.0
+        self.integration_time = self.integration_time/2.0#jks68 commented out on 24/6/2022
         self.background_gradient = old_div((background_2-background_1),self.integration_time)
         self.background_constant = background_1-(self.integration_time*self.background_gradient)
         self.background = background_1
@@ -274,7 +269,8 @@ class Spectrometer(Instrument):
                     if self.variable_int_enabled == True:
                         new_spectrum = old_div((spectrum-(self.background_constant+self.background_gradient*self.integration_time)),(self.reference-self.background_ref))
                     else:#bg_ref NOT taken
-                        new_spectrum = old_div((spectrum-self.background),(self.reference-self.background_ref))
+#                        new_spectrum = old_div((spectrum-self.background),(self.reference-self.background_ref))
+                        new_spectrum = (spectrum-self.background)/(self.reference-self.background_ref)#jks68 added 24/6/2022, delete if doesnt work and uncomment line above
                     np.seterr(**old_error_settings)
                     new_spectrum[np.isinf(new_spectrum)] = np.NaN
                 else:#bg_ref NOT taken, only bg taken
@@ -414,13 +410,6 @@ class Spectrometer(Instrument):
         to_return = ArrayWithAttrs(to_save, attrs = metadata)
         return to_return
 
-    def z_Stack_test(self):
-        Self.move_axis_relative(index = 2, axis=3, dir=1)
-        self.z_stack_spectra = np.arange(0,11,1)
-        self.z_stack_opt_int = 1
-        print('z_stack_test method has been called')
-        
-
 class Spectrometers(Instrument):
     def __init__(self, spectrometer_list):
         assert False not in [isinstance(s, Spectrometer) for s in spectrometer_list],\
@@ -502,9 +491,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
         super(SpectrometerControlUI, self).__init__()
         uic.loadUi(ui_file, self)
         self.spectrometer = spectrometer
-
-#dmk50 testing sept 2022
-        self.z_Stack_test_button.clicked.connect(self.button_pressed)
+        
         self.integration_time.setValidator(QtGui.QDoubleValidator())
         self.integration_time.textChanged.connect(self.check_state)
         self.integration_time.textChanged.connect(self.update_param)
@@ -568,9 +555,6 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             self.background_subtracted.blockSignals(True)
             self.background_subtracted.setCheckState(QtCore.Qt.Checked)
             self.background_subtracted.blockSignals(False)   
-#dmk50 testing sept 2022
-        elif sender is self.z_Stack_test_button:
-            print('z_Stack_button has been clicked')
 #jks68 22/09/2021 start
         elif sender is self.read_background_button_ref:
             self.spectrometer.read_background_ref()

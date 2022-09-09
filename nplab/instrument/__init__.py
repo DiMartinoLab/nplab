@@ -13,6 +13,7 @@ of metadata in ArrayWithAttrs objects that include both data and metadata.
 
 from builtins import str
 from nplab.utils.thread_utils import locked_action_decorator, background_action_decorator
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 import nplab
 from weakref import WeakSet
 import nplab.utils.log
@@ -26,6 +27,9 @@ import h5py
 import datetime
 LOGGER = create_logger('Instrument')
 LOGGER.setLevel('INFO')
+
+
+    
 
 class Instrument(ShowGUIMixin):
     """Base class for all instrument-control classes.
@@ -201,3 +205,6 @@ class Instrument(ShowGUIMixin):
                 f.flush()    
         else:
             f.create_dataset(name, data=data ,attrs = attrs)
+
+
+    

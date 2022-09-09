@@ -10,11 +10,12 @@ import nplab
 from nplab.instrument.spectrometer.kandor import Kandor
 from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
 from nplab.instrument.electronics.keithley_2636b_smu import Keithley2636B as Keithley
-from nplab.instrument.stage.smaract_mcs import SmaractMCSSerial
+#from nplab.instrument.stage.smaract_mcs import SmaractMCSSerial
 from nplab.instrument.shutter.Arduino_ttl_shutter import Arduino_tri_shutter as shutter
 from nplab.instrument.light_sources.matchbox_laser import MatchboxLaser
 
 from nplab.instrument.stage.SMC100 import SMC100
+from lab3.Dawn_z_stack import z_stack
 import nplab.utils.gui 
 import nplab.datafile as datafile
 from nplab.instrument.spectrometer import Spectrometer
@@ -65,12 +66,12 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         uic.loadUi('lab3_interface_kymera.ui', self)
         
 ###comment out software you are not going to use
-        self.initialise_smu() #Keithley, for electrical measurements
+#        self.initialise_smu() #Keithley, for electrical measurements
 #        self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
         self.initialise_SMC100() #actuators for xy stage
-#        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
-        self.initialise_shutter() #control box
-        self.initialise_Kandor() #Kymera, for Raman with 633nm or 785nm laser #jks68 19/10/2021
+        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
+#        self.initialise_shutter() #control box
+#        self.initialise_Kandor() #Kymera, for Raman with 633nm or 785nm laser #jks68 19/10/2021
 ####end        
         self.radiantvoltages=None
 
@@ -87,6 +88,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 #        self.andor_cooler_checkBox.toggled.connect(self.andor_cooler)
         self.UploadFile.clicked.connect(self.processradiantfile)
         self.openstage.clicked.connect(self.open_SMC100_ui)
+        self.z_stack.clicked.connect(self.open_Dawn_z_stack_ui)
 #        self.myArduino.shutterIN() #To ensure shutter is closed
         
 #start of lab 3 experiment
@@ -165,21 +167,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
                 #spectrum = self.spectrometer.read_spectrum(bundle_metadata=True)
                 if self.mode_smuOnly.isChecked():
                     self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
-                else:
-                    
-                    #TODO:
-                    # for raman series: check mirror position
-                    # put in DF configuration
-                        # mirror in DF
-                        # open shutter white light
-                        # close andor shutter (not needed)
-                        # take one DF spectrum
-                    # put in raman configuration
-                        # mirror in raman
-                        # close shutter white light
-                        # open andor shutter
-                        # take raman, save
-                    # put in DF configuration and save as DF final
+
                     
                     if (self.mode_RamanOnly.isChecked()):
                         RamanSpectrum_thread = threading.Thread(target = self.acquire_Raman_spectrum )    # acquiring Raman spectrum in new thread
@@ -389,6 +377,9 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         
     def open_SMC100_ui(self):
         self.SMC100.show_gui()
+
+    def open_Dawn_z_stack_ui(self):
+        self.z_stack.show_gui()
         
     def acquireIVdatapoint(self, activeVoltage, t0, activeDatagroup):
         measuredCurrent = self.smu.read_current()
