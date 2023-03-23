@@ -4,6 +4,8 @@
 Issues:
     - The waitStop property for moving doesn't really work, and if you send two move commands quickly after each other,
     the system doesn't react fast enough and doesn't reach the final destination.
+    
+Modified by Trung 16.02.23 for rig2 SM100 controller and Newport stages
 """
 from __future__ import print_function
 
@@ -15,8 +17,6 @@ import time
 
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.stage import Stage
-from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
-#pyplot? panda?
 
 # never wait for more than this e.g. during wait_states
 MAX_WAIT_TIME_SEC = 300
@@ -64,7 +64,7 @@ class SMC100InvalidResponseException(Exception):
         super(SMC100InvalidResponseException, self).__init__(s)
 
 
-class z_stack(SerialInstrument, Stage):
+class SMC100(SerialInstrument):
     """
     Class to interface with Newport's SMC100 controller.
     The SMC100 accepts commands in the form of:
@@ -104,7 +104,6 @@ class z_stack(SerialInstrument, Stage):
                     timeout=0.050)
 
         SerialInstrument.__init__(self, port)
-        Stage.__init__(self)
         
 
         # self._logger.debug('Connecting to SMC100 on %s' % (port))
@@ -200,7 +199,7 @@ class z_stack(SerialInstrument, Stage):
                     self._last_sendcmd_time = now
                     done = True
                     # return None
-        print(str(reply))
+        #print(str(reply))
         return reply
 
     def _readline(self):
@@ -312,15 +311,17 @@ class z_stack(SerialInstrument, Stage):
         time.sleep(2)
         
         self._send_cmd('ZX2', 3) #added by Asia for 3rd axis, seems not necessary
-        time.sleep(2) #added by Asia for 3rd axis, seems not necessary
-
-        self._send_cmd('BA', 1, '0.00762') #modified by Asia on 3/12 - backlash values, printed on actuators
-        self._send_cmd('BA', 2, '0.00803') #modified by Asia on 3/12  - backlash values, printed on actuators
+        #time.sleep(2) #added by Asia for 3rd axis, seems not necessary
+        
+        # for Rig2
+        self._send_cmd('BA', 1, '0.00862') #modified by Trung 16.02.23 - backlash values, printed on actuators
+        self._send_cmd('BA', 2, '0.00853') #modified by Trung 16.02.23  - backlash values, printed on actuators
         self._send_cmd('BA', 3, '0.01151') #added by Asia - backlash values, printed on actuators        
- #       self._send_cmd('BA', 3, '0.01936') #added by Asia - backlash values, printed on actuators
+
         
         # exit configuration mode
         self._send_cmd('PW0', 1)
+        # xtn20: wait for communication with stage
         time.sleep(5)
         self._send_cmd('PW0', 2)
         time.sleep(5) #added by Asia for 3rd axis
@@ -432,27 +433,18 @@ class z_stack(SerialInstrument, Stage):
     def set_velocity(self, velocity):
         self._send_cmd('VA_Set', velocity)
 
-        
-    # def get_qt_ui(self):
-    #     return SMC100UI(self)
 
 if __name__ == '__main__':
     smc100 = SMC100('COM1', (1,2,3))
-#    smc100.reset_and_configure()
-#    smc100._send_cmd('RS')
-#    smc100._send_cmd('PW1')
-#    smc100._send_cmd('PW0')
-#    smc100._send_cmd('PW0')
-#    print('Axes: ', smc100.axis_names)
-#
-#    print(smc100.get_position()) #_mm() #get_position()
-#    print(smc100.get_status())
-
-#    smc100.show_gui()
-#smc100.get_status
     smc100.show_gui()
-    # test_configure()
 
-    # test_general()
 
-    # test_GUI()
+
+
+
+
+
+
+
+
+

@@ -75,10 +75,6 @@ class Spectrometer(Instrument):
         self.delay = 0
         self.time_series_name = 'time_series_%d'
 
-        #dmk50 Aug 2022 implementing zstack button
-        self.z_stack_spectra = None
-        self.z_stack_opt_int = None
-
 
     def __del__(self):
         try:
@@ -186,13 +182,14 @@ class Spectrometer(Instrument):
     def read_background_ref(self):
         """Acquire a new spectrum and use it as a reference background.
         This background should be less than 50% of the spectrometer saturation"""
-        background_1 = self.read_spectrum()
-        self.integration_time = 2.0*self.integration_time
-        self.integration_time = self.integration_time/2.0
-        self.background_ref = background_1
+        #commented out 03-nov-22 - unnecessary?!
+        #background_1 = self.read_spectrum()
+        #self.integration_time = 2.0*self.integration_time
+        #self.integration_time = self.integration_time/2.0
+        #self.background_ref = background_1
+        self.background_ref = self.read_spectrum()
         self.background_int_ref = self.integration_time
-        self.stored_backgrounds[self.reference_ID] = {'background_ref' : self.background_ref,
-                                                     'background_int_ref': self.background_int_ref}
+        self.stored_backgrounds[self.reference_ID] = {'background_ref' : self.background_ref,'background_int_ref': self.background_int_ref}
         self.update_config('background_ref', self.background_ref)
         self.update_config('background_int_ref', self.background_int_ref)
 #jks68 end 21/09/2021
@@ -503,8 +500,6 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
         uic.loadUi(ui_file, self)
         self.spectrometer = spectrometer
 
-#dmk50 testing sept 2022
-        self.z_Stack_test_button.clicked.connect(self.button_pressed)
         self.integration_time.setValidator(QtGui.QDoubleValidator())
         self.integration_time.textChanged.connect(self.check_state)
         self.integration_time.textChanged.connect(self.update_param)
@@ -707,7 +702,6 @@ class DisplayThread(QtCore.QThread):
         self.single_shot = False
         self.refresh_rate = 30.
         self.spectrum = None
-
 
     def run(self):
         t0 = time.time()

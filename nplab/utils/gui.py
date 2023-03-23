@@ -99,7 +99,9 @@ def show_widget(Widget, *args, **kwargs):
     app = get_qt_app()
     ui = Widget(*args, **kwargs)
     ui.show()
-    sys.exit(app.exec_())
+    #sys.exit(app.exec_())
+    app.exec_()
+    return 
 
 def show_guis(instruments, block=True):
     """Display the Qt user interfaces of a list of instruments."""

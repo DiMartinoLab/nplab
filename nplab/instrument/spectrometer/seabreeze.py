@@ -272,6 +272,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             return self._latest_integration_time
         else:
             return None
+        
+
 
     def set_integration_time(self, milliseconds):
         """Set the integration time"""
@@ -423,11 +425,11 @@ class OceanOpticsControlUI(SpectrometerControlUI):
     def __init__(self, spectrometer):
         assert isinstance(spectrometer, OceanOpticsSpectrometer), 'spectrometer must be an OceanOpticsSpectrometer'
         super(OceanOpticsControlUI, self).__init__(spectrometer,os.path.join(os.path.dirname(__file__),'ocean_optics_controls.ui'))
-#        self.tec_temperature.setValidator(QtGui.QDoubleValidator())
+        #self.tec_temperature.setValidator(QtGui.QDoubleValidator())
         # self.tec_temperature.textChanged.connect(self.check_state)
         # self.tec_temperature.textChanged.connect(self.update_param)
         # self.tec_temperature.setText(str(spectrometer.tec_temperature))
-        try: 
+        try:
             self.spectrometer.get_tec_temperature()
             tec = True
         except AttributeError as e:

@@ -221,7 +221,7 @@
               <string>Laser Power</string>
              </property>
             </widget>
-            <widget class="QPushButton" name="z_stack">
+            <widget class="QPushButton" name="open_z_stack_window">
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -234,11 +234,39 @@
               <string>Z stack</string>
              </property>
             </widget>
+            <widget class="QPushButton" name="OlympusCameraButton">
+             <property name="geometry">
+              <rect>
+               <x>124</x>
+               <y>100</y>
+               <width>111</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Olympus camera</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="MercuryControllerButton">
+             <property name="geometry">
+              <rect>
+               <x>120</x>
+               <y>120</y>
+               <width>121</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Mercury controllers</string>
+             </property>
+            </widget>
             <zorder>label_15</zorder>
             <zorder>lineEdit</zorder>
             <zorder>laser633_isON_checkbox</zorder>
             <zorder>open_laser633_UI_button</zorder>
-            <zorder>z_stack</zorder>
+            <zorder>open_z_stack_window</zorder>
+            <zorder>OlympusCameraButton</zorder>
+            <zorder>MercuryControllerButton</zorder>
            </widget>
           </item>
           <item>
@@ -249,16 +277,6 @@
             <layout class="QFormLayout" name="formLayout">
              <item row="0" column="0" colspan="2">
               <layout class="QHBoxLayout" name="horizontalLayout_16">
-               <item>
-                <widget class="QPushButton" name="SmarAct_rotate_left_button">
-                 <property name="styleSheet">
-                  <string notr="true"/>
-                 </property>
-                 <property name="text">
-                  <string>&lt;---</string>
-                 </property>
-                </widget>
-               </item>
                <item>
                 <widget class="QPushButton" name="SmarAct_rotate_right_button">
                  <property name="text">
@@ -628,13 +646,6 @@
             <widget class="QPushButton" name="acquire_single_Raman_spectrum_button">
              <property name="text">
               <string>Acquire single Raman spectrum</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_18">
-             <property name="text">
-              <string>Single Raman spectrum description</string>
              </property>
             </widget>
            </item>

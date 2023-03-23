@@ -310,7 +310,7 @@ class SMC100(SerialInstrument, Stage):
         time.sleep(2)
         
         self._send_cmd('ZX2', 3) #added by Asia for 3rd axis, seems not necessary
-        time.sleep(2) #added by Asia for 3rd axis, seems not necessary
+        #time.sleep(2) #added by Asia for 3rd axis, seems not necessary
 
         self._send_cmd('BA', 1, '0.00762') #modified by Asia on 3/12 - backlash values, printed on actuators
         self._send_cmd('BA', 2, '0.00803') #modified by Asia on 3/12  - backlash values, printed on actuators
@@ -319,6 +319,7 @@ class SMC100(SerialInstrument, Stage):
         
         # exit configuration mode
         self._send_cmd('PW0', 1)
+        # xtn20: wait for communication with stage
         time.sleep(5)
         self._send_cmd('PW0', 2)
         time.sleep(5) #added by Asia for 3rd axis

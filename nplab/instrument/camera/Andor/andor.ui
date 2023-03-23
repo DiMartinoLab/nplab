@@ -500,7 +500,7 @@
             <number>1</number>
            </property>
            <property name="maximum">
-            <number>400</number>
+            <number>999999999</number>
            </property>
           </widget>
          </item>
@@ -572,7 +572,7 @@
             <number>1</number>
            </property>
            <property name="maximum">
-            <number>400</number>
+            <number>999999999</number>
            </property>
           </widget>
          </item>

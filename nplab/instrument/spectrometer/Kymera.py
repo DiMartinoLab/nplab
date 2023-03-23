@@ -580,7 +580,7 @@ class KymeraLegacy(Instrument):
         return KymeraControlUI(self)    
 
 class KymeraControlUI(QtWidgets.QWidget,UiTools):
-    def __init__(self, kymera, ui_file =os.path.join(os.path.dirname(__file__),'kymera.ui'),  parent=None):
+    def __init__(self, kymera, ui_file = os.path.join(os.path.dirname(__file__),'kymera.ui'),  parent=None):
         assert isinstance(kymera, Kymera), "instrument must be a Triax"
         super(KymeraControlUI, self).__init__()
         uic.loadUi(ui_file, self)

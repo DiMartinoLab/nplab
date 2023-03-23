@@ -16,7 +16,7 @@ from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
 class Shamdor(Andor):
     ''' Wrapper class for the shamrock and the andor
     '''
-    def __init__(self, pixel_number = 1600, pixel_width = 16, use_shifts = False, laser = '_633', white_shutter = None):
+    def __init__(self, pixel_number = 1024, pixel_width = 13, use_shifts = False, laser = '_785', white_shutter = None):
         self.shamrock = Shamrock()
         self.shamrock.pixel_number = pixel_number
         self.shamrock.pixel_width = pixel_width
