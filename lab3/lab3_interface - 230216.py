@@ -32,7 +32,7 @@ from nplab.ui.ui_tools import QtWidgets
 
 import smaract.ctl as smaract_package
 from lab3.z_stack_window import z_stack_window_object
-#from lab3.SMC100StageControl_zstack import SMC100_window_object
+from lab3.SMC100StageControl_zstack import SMC100_window_object
 #from lab3.OlympusCamera import OlympusCamera
 from nplab.instrument.mercuryUSB.mercuryUSB import temperatureController as MiC_package
 from lucam import Lucam
@@ -76,7 +76,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 #        self.initialise_smu() #Keithley, for electrical measurements
 #        self.initialise_SmarAct_stage() #piezo stage at cryostat       
 #        self.initialise_MercuryControllers(truth_value = True) # Mercury controller iTC and iPS-M. do not initialise if truth_value is input as false       
-#        self.initialise_SMC100() #actuators for xy stage
+        self.initialise_SMC100() #actuators for xy stage
         self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
 #        self.initialise_camera() #Olympus camera
 #        self.initialise_shutter() #control box

@@ -54,8 +54,8 @@ class Spectrometer(Instrument):
         self.background_constant =None
         self.background_gradient = None
         self.background_int = None
-        self.background_ref = None#jks68
-        self.background_int_ref = None#jks68
+        self.background_ref = None #jks68
+        self.background_int_ref = None #jks68
         self.reference_int = None
       #  self.variable_int_enabled = DumbNotifiedProperty(False)
         self.latest_raw_spectrum = None

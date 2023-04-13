@@ -80,15 +80,15 @@ class SMC100InvalidResponseException(Exception):
 class SMC100_window_object(QtWidgets.QWidget, UiTools):
     #inherit QWidget methods
     """ use this line for lab3 experiment"""
-#    def __init__(self, SMC100_instance, ui_file = os.path.join(os.path.dirname(__file__),'SMC100StageControl_zstack.ui'),  parent=None):
-    """ use this line for running SMC100 only"""
-    def __init__(self, ui_file = os.path.join(os.path.dirname(__file__),'SMC100StageControl_zstack.ui'),  parent=None):
+    def __init__(self, SMC100_instance, ui_file = os.path.join(os.path.dirname(__file__),'SMC100StageControl_zstack.ui'),  parent=None):
+#    """ use this line for running SMC100 only"""
+#    def __init__(self, ui_file = os.path.join(os.path.dirname(__file__),'SMC100StageControl_zstack.ui'),  parent=None):
         super(SMC100_window_object, self).__init__() 
         uic.loadUi(ui_file, self)
         """ use this line for lab3 experiment"""    
-#        self.SMC100 = SMC100_instance
+        self.SMC100 = SMC100_instance
         """ use this line for running SMC100 only"""
-        self.SMC100 = SMC100('COM1', (1,2,3))
+#        self.SMC100 = SMC100('COM1', (1,2,3))
         
         self.InitialiseButton.clicked.connect(self.initialise_stage)
         self.DisconnectButton.clicked.connect(self.disconnect_stage)
@@ -176,11 +176,11 @@ class SMC100_window_object(QtWidgets.QWidget, UiTools):
         print(self.SMC100.get_position(2))
         print(self.SMC100.get_position(3))
     
-#    def make_window(self):
-#        app = get_qt_app()
-#        self.show()
-#        app.exec_()
-#        return self
+    def make_window(self):
+        app = get_qt_app()
+        self.show()
+        app.exec_()
+        return self
         
 class sub_initialise_stage(QRunnable):
     def __init__(self, SMC100):
@@ -241,10 +241,10 @@ class sub_SM100_move_mid(QRunnable):
         stage_in_use = 0
         
 """ For running GUI alone"""
-app = QtWidgets.QApplication(sys.argv)
-main = SMC100_window_object()
-main.show()
-sys.exit(app.exec_())
+#app = QtWidgets.QApplication(sys.argv)
+#main = SMC100_window_object()
+#main.show()
+#sys.exit(app.exec_())
 
 
 

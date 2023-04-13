@@ -1,6 +1,4 @@
 """
-
-
 Issues:
     - The waitStop property for moving doesn't really work, and if you send two move commands quickly after each other,
     the system doesn't react fast enough and doesn't reach the final destination.
@@ -63,7 +61,8 @@ class SMC100InvalidResponseException(Exception):
         s = 'Invalid response to %s: %s' % (cmd, resp)
         super(SMC100InvalidResponseException, self).__init__(s)
 
-
+        
+        
 class SMC100(SerialInstrument):
     """
     Class to interface with Newport's SMC100 controller.
@@ -118,6 +117,8 @@ class SMC100(SerialInstrument):
         for id in self._smcID:
             self.axis_names += (str(id), )
             self._send_cmd('ID', id, '?', True)  # Just testing the connection
+            
+            
 
     def __del__(self):
         self.close()

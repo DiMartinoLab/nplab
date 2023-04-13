@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1165</width>
-    <height>687</height>
+    <width>1173</width>
+    <height>716</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -63,7 +63,7 @@
        </widget>
       </item>
       <item row="1" column="4">
-       <widget class="QDoubleSpinBox" name="time_delay_SpinBox">
+       <widget class="QDoubleSpinBox" name="delay_doubleSpinBox">
         <property name="decimals">
          <number>1</number>
         </property>
@@ -79,9 +79,6 @@
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
-        </property>
-        <property name="text">
-         <string>50</string>
         </property>
        </widget>
       </item>
@@ -224,7 +221,7 @@
        </widget>
       </item>
       <item row="1" column="0">
-       <widget class="QPushButton" name="read_bkg_button">
+       <widget class="QPushButton" name="take_bkg_button">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -312,13 +309,6 @@
         </property>
         <property name="text">
          <string>Background Subtracted</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="3">
-       <widget class="QCheckBox" name="white_ref_checkbox">
-        <property name="text">
-         <string>White Ref</string>
         </property>
        </widget>
       </item>
@@ -424,7 +414,7 @@
     </item>
    </layout>
   </widget>
-  <widget class="QPushButton" name="OO_disconnect_button">
+  <widget class="QPushButton" name="stageOO_disconnect_button">
    <property name="geometry">
     <rect>
      <x>260</x>
@@ -434,7 +424,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Ocean Optics disconnect</string>
+    <string>Smaract and Ocean Optics disconnect</string>
    </property>
   </widget>
   <widget class="QGroupBox" name="Stage_Group">
@@ -493,7 +483,7 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QPushButton" name="stage_feature_button">
+       <widget class="QPushButton" name="stage_current_view_button">
         <property name="text">
          <string>Cryostat view</string>
         </property>
@@ -506,31 +496,17 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="3">
-       <widget class="QPushButton" name="disconnect_stage_button">
-        <property name="text">
-         <string>Disconnect</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="3">
-       <widget class="QPushButton" name="stage_mmid_button">
-        <property name="text">
-         <string>Mid</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
-       <widget class="QPushButton" name="get_stage_position_button">
-        <property name="text">
-         <string>Position</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </item>
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QLineEdit" name="testing_stage_name_label">
+        <property name="text">
+         <string>time_series_%d</string>
+        </property>
+       </widget>
+      </item>
       <item>
        <widget class="QPushButton" name="stage_mtoward_button">
         <property name="text">
