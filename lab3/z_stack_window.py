@@ -43,7 +43,7 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         # set objects for spectrometer 
         self.OOspectrometer = OOSpect_instance
         self.OOspectrometer.set_integration_time(50)
-        self.set_default_int_times( default_t_in_ms=50)
+        self.set_default_int_times(default_t_in_ms=50)
         global OO_spectrometer_in_use
         OO_spectrometer_in_use = False
         
@@ -103,15 +103,18 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         
         self.read_bkg_for_ref_button.clicked.connect(self.read_bkg_for_ref_method)
         self.clear_bkg_for_ref_button.clicked.connect(self.clear_bkg_for_ref_method)
+        self.clear_bkg_for_ref_method()
         self.read_bkg_button.clicked.connect(self.read_background_method)
         self.clear_bkg_button.clicked.connect(self.clear_background_method)
+        self.clear_background_method()
         self.read_ref_button.clicked.connect(self.read_ref_method)
         self.clear_ref_button.clicked.connect(self.clear_ref_method)
+        self.clear_ref_method()
         
         self.take_spectrum_button.clicked.connect(self.take_spec_and_update_display)
         self.save_button.clicked.connect(self.save_single_DF_spectrum)
         
-        self.time_series_pushButton.clicked.connect(self.take_t_series)
+        self.time_series_pushButton.clicked.connect(self.t_series_method)
     
         self.OO_disconnect_button.clicked.connect(self.OO_disconnect)
         
@@ -135,9 +138,7 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         """setup stage controls and display - using olympus OR smaract"""
         self.disconnect_stage_button.clicked.connect(self.disconnect_stage)
         # dmk50 April 2023
-        self.stage_mleft_button.clicked.connect(self.SMC100_move_left)
         if stage_enabled == 'Olympus stage':
-            #this is used to prevent sending too many commands to stage at once
             global stage_in_use
             stage_in_use = False
             
@@ -276,72 +277,71 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         self.OOspectrometer.reference_int     = default_t_in_ms
 
     def read_bkg_for_ref_method(self):
-        #read spec and store as background for reference. chenge check-box state to match.
-        self.OOspectrometer.background_ref = self.OOspectrometer.read_spectrum()
-        self.OOspectrometer.background_int_ref = self.OOspectrometer.integration_time
-        self.OOspectrometer.stored_backgrounds[self.OOspectrometer.reference_ID] = {'background_ref' : self.OOspectrometer.background_ref,'background_for_ref_int_t': self.OOspectrometer.background_int_ref}
-        self.OOspectrometer.update_config('background_ref', self.OOspectrometer.background_ref)
-        self.OOspectrometer.update_config('background_for_ref_int_t', self.OOspectrometer.background_int_ref)
-        print(self.OOspectrometer.read_background_ref)
-        self.background_subtracted_ref.setCheckState(QtCore.Qt.Checked)
+        #use parallel thread to tell spectrometer to read spectrum. Mark spectrometer as in use until it's finished reading.
+        take_spec_task = sub_take_spec(self.OOspectrometer)
+        global OO_spectrometer_in_use
+        OO_spectrometer_in_use=True
+        self.pool.start(take_spec_task)
+        # Wait till spectrum is taken
+        while OO_spectrometer_in_use ==True:
+            pass
+        #once finished:
+        if OO_spectrometer_in_use ==False:
+            #store the spectrum
+            self.OOspectrometer.background_ref = self.remove_invalid_values_from_spectrum(take_spec_task.current_spec)
+            self.OOspectrometer.background_int_ref = self.OOspectrometer.integration_time
+            self.background_subtracted_ref.setCheckState(QtCore.Qt.Checked)
+            print('background for reference has been stored')
             
     def clear_bkg_for_ref_method(self):
-        self.OOspectrometer.background_ref = None
+        self.OOspectrometer.background_ref = np.zeros(len(self.wl_in_nm ))
         self.background_subtracted_ref.setCheckState(QtCore.Qt.Unchecked)
-        
-    def fetch_bkg_for_ref_method(self, a_spectrum):
-        # if no bkg for ref has been collected, set to array of zeros of appropriate length
-        if self.background_subtracted_ref.isChecked()==True:
-            pass
-        elif self.background_subtracted_ref.isChecked()==False:
-            self.OOspectrometer.background_ref = np.zeros(len(a_spectrum))
-            
+    
     def read_ref_method(self):
-        self.OOspectrometer.reference = self.OOspectrometer.read_spectrum() 
-        self.OOspectrometer.reference_int = self.OOspectrometer.integration_time
-        self.OOspectrometer.update_config('reference', self.OOspectrometer.reference)
-        self.OOspectrometer.update_config('reference_int',self.OOspectrometer.reference_int ) 
-        self.OOspectrometer.stored_references[self.OOspectrometer.reference_ID] = {'reference' : self.OOspectrometer.reference,'reference_int' : self.OOspectrometer.reference_int}
-        self.referenced.setCheckState(QtCore.Qt.Checked)
+        #use parallel thread to tell spectrometer to read spectrum. Mark spectrometer as in use until it's finished reading.
+        take_spec_task = sub_take_spec(self.OOspectrometer)
+        global OO_spectrometer_in_use
+        OO_spectrometer_in_use=True
+        self.pool.start(take_spec_task)
+        # Wait till spectrum is taken
+        while OO_spectrometer_in_use ==True:
+            pass
+        #once finished:
+        if OO_spectrometer_in_use ==False:
+            self.OOspectrometer.reference  = self.remove_invalid_values_from_spectrum(take_spec_task.current_spec)
+            self.OOspectrometer.reference_int = self.OOspectrometer.integration_time
+            self.referenced.setCheckState(QtCore.Qt.Checked)
+            print('reference has been stored')
+
 
     def clear_ref_method(self):
-        self.OOspectrometer.reference = None
+        self.OOspectrometer.reference = np.ones(len(self.wl_in_nm ))
         self.referenced.setCheckState(QtCore.Qt.Unchecked)
         
-    def fetch_ref_method(self, a_spectrum):
-        # if no  ref has been collected, set to array of ones of appropriate length
-        if self.referenced.isChecked()==True:
-            pass
-        elif self.referenced.isChecked()==False:
-            self.OOspectrometer.reference = np.ones(len(a_spectrum))
-
     def read_background_method(self):
-        """Acquire a new spectrum and use it as a background measurement.
-        This background should be less than 50% of the spectrometer saturation"""
-        self.OOspectrometer.background = self.OOspectrometer.read_spectrum()
-        self.OOspectrometer.background_int = self.OOspectrometer.integration_time
-        self.OOspectrometer.stored_backgrounds[self.OOspectrometer.reference_ID] = {'background' : self.OOspectrometer.background,
-                                                     'background_int': self.OOspectrometer.background_int}
-        self.OOspectrometer.update_config('background', self.OOspectrometer.background)
-        self.OOspectrometer.update_config('background_int', self.OOspectrometer.background_int)
-        self.background_subtracted.setCheckState(QtCore.Qt.Checked)
+        #use parallel thread to tell spectrometer to read spectrum. Mark spectrometer as in use until it's finished reading.
+        take_spec_task = sub_take_spec(self.OOspectrometer)
+        global OO_spectrometer_in_use
+        OO_spectrometer_in_use=True
+        self.pool.start(take_spec_task)
+        # Wait till spectrum is taken
+        while OO_spectrometer_in_use ==True:
+            pass
+        #once finished:
+        if OO_spectrometer_in_use ==False:
+            #store the spectrum
+            self.OOspectrometer.background  = self.remove_invalid_values_from_spectrum(take_spec_task.current_spec)
+            self.OOspectrometer.background_int= self.OOspectrometer.integration_time
+            self.background_subtracted.setCheckState(QtCore.Qt.Checked)
+            print('background has been stored')
+
         
     def clear_background_method(self):
-        self.OOspectrometer.background = None
-        #self.OOspectrometer.background_int = None
+        self.OOspectrometer.background = np.zeros(len(self.wl_in_nm ))
         self.background_subtracted.setCheckState(QtCore.Qt.Unchecked)
-    
-    def fetch_bkg_method(self, a_spectrum):
-        # if no  bkg has been collected, set to array of ones of appropriate length
-        if self.background_subtracted.isChecked()==True:
-            pass
-        elif self.background_subtracted.isChecked()==False:
-            self.OOspectrometer.background  = np.zeros(len(a_spectrum))
-    
-    def take_spec(self):
 
-        #update int t
-       
+    def take_spec(self):    
+
         # read the current field strength and sample temperature
         if self.MiPS_handle != None:
             current_field = sub_read_current_field(self.MiPS_handle, self.cFieldT)
@@ -352,105 +352,104 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         
         #hold cryostat stage steady during integration of signal by the spectrometer
         if self.stage_enabled == 'Cryostat stage':
-            # change the movemode of channel 1 to absolute and
-            # read the current stage position (focussing channel: 1)
-            channel = 1
+            # change the movemode of channel 1 to absolute and read the current stage position 
             move_mode = smaract_package.MoveMode.CL_ABSOLUTE
             self.smaract_set_movemode(1, move_mode)
-            self.current_z_position = smaract_package.GetProperty_i64(self.Smaract_stage, channel, smaract_package.Property.POSITION)
-#            # test
-#            smaract_package.Move(self.Smaract_stage, channel, 0, 0)
-#            time.sleep(5)
-#            #end test
-            
-            # hold the stage at this position while OO takes spectrum
-            stage_on_hold = sub_stage_on_hold(self.Smaract_stage, self.current_z_position , channel)
+            self.current_z_position = smaract_package.GetProperty_i64(self.Smaract_stage, 1, smaract_package.Property.POSITION)
+            stage_on_hold = sub_stage_on_hold(self.Smaract_stage, self.current_z_position, 1)
             self.pool.start(stage_on_hold)
-            
-        elif self.stage_enabled == 'Olympus stage':
-            self.current_z_position = self.SMC_stage.get_position(3)
-
+        #if using olympus stage just store curret z position of stage.
+        if self.stage_enabled == 'Olympus stage':
+            global stage_in_use
+            while stage_in_use ==True:            
+                pass
+            if stage_in_use ==False:    
+                self.current_z_position = self.SMC_stage.get_position(3)
         
-        # Take the spectrum in the background
+        # Use helper class to setup task to take the spectrum in the background
+        take_spec_task = sub_take_spec(self.OOspectrometer)
+        # mark spectrometer in use, and set task running
         global OO_spectrometer_in_use
         OO_spectrometer_in_use=True
-        take_spec_task = sub_take_spec(self.OOspectrometer)
         self.pool.start(take_spec_task)
         
         # Wait till spectrum is taken
-        
         while OO_spectrometer_in_use ==True:
             pass
-        print(OO_spectrometer_in_use )
-        if self.stage_enabled == 'Cryostat stage':
-            # change the movemode of channel 1 back to step
-            channel = 1
-            self.smaract_set_movemode(channel, self.smaract_movemode)
-        
-        self.current_raw_spec = take_spec_task.current_spec
-        if self.MiPS_handle != None:
-            self.current_field = current_field.cFieldT_value
-        elif self.MiPS_handle == None:
-            self.current_field =0
-        if self.MiTC_handle != None:  
-            self.current_temp = current_temp.cSampleTemp_value
-        elif self.MiTC_handle == None: 
-            self.current_temp  = 0
+        #once finished:
+        if OO_spectrometer_in_use ==False:
+            #store the spectrum
+            self.current_raw_spec = None
+            self.current_processed_spec = None
+            self.current_raw_spec = self.remove_invalid_values_from_spectrum(take_spec_task.current_spec)
+            self.current_processed_spec = self.process_spec(self.current_raw_spec)
+            #change smaract z-axis movemode back to the normal 'step' setting
+            if self.stage_enabled == 'Cryostat stage':
+                channel = 1
+                self.smaract_set_movemode(channel, self.smaract_movemode)
+            #store solenoid params, if applicable
+            if self.MiPS_handle != None:
+                self.current_field = current_field.cFieldT_value
+            elif self.MiPS_handle == None:
+                self.current_field =0
+            if self.MiTC_handle != None:  
+                self.current_temp = current_temp.cSampleTemp_value
+            elif self.MiTC_handle == None: 
+                self.current_temp  = 0
+
+    def remove_invalid_values_from_spectrum(self,spectrum):
+        inf_truth = np.isinf(spectrum)
+        nan_truth = np.isnan(spectrum)
+        i=0
+        while i<len(spectrum):
+            if inf_truth[i]==True or nan_truth[i]==True:
+                spectrum[i]=0
+            i=i+1
+        return spectrum
             
-        #storing raw and processed spec in seperate variables
-        self.current_processed_spec = self.process_spec(self.current_raw_spec)
-        
     def take_spec_and_update_display(self):
         # take_spec method allows parallel processing
         self.take_spec()
         #this line in twice to get rid of weird timing glitch...temporary patch...
-        self.take_spec()
+        #self.take_spec()
         global OO_spectrometer_in_use 
         while OO_spectrometer_in_use == True:
             pass
         if OO_spectrometer_in_use == False:
-            self.update_display(self.current_processed_spec)
+            self.spec_plot.clear()
+            self.spec_plot.plot(self.wl_in_nm, self.current_processed_spec)
+            print('single spec display has been updated')
         
     
         
     def process_spec(self, a_spectrum):
-        # Fetch bkg for ref, ref, and bkg
-        # If any of above not stored - return array of zeros or ones as appropriate to stand as placeholder in calculation
-        self.fetch_bkg_for_ref_method(a_spectrum)
-        self.fetch_bkg_method(a_spectrum)
-        
-        self.fetch_ref_method(a_spectrum)
-        
-        #scale bkg/ref spectra according to ratio of integration times with data spectrum being processed
-        scaled_bkg_for_ref = self.OOspectrometer.background_ref * (self.OOspectrometer.integration_time/self.OOspectrometer.background_int_ref)
-        scaled_bkg = self.OOspectrometer.background * (self.OOspectrometer.integration_time/self.OOspectrometer.background_int)
-        scaled_ref = self.OOspectrometer.reference * (self.OOspectrometer.integration_time/self.OOspectrometer.reference_int)
-        
-        #check whether white or metal reference is used - use/don't use ratio curve accordingly
-        #nb - only use ratio curve if a reference spectrum has been measured
-        if self.referencing_type == 'Gold':
-            if self.referenced.isChecked()==False:
-                scaled_ref_bkg_subtract = (scaled_ref - scaled_bkg_for_ref )
-            elif self.referenced.isChecked()==True:
-                scaled_ref_bkg_subtract = (scaled_ref - scaled_bkg_for_ref )* self.ratio_curve_values 
-        elif self.referencing_type == 'White':
-            scaled_ref_bkg_subtract = (scaled_ref - scaled_bkg_for_ref )
-            
-        # accounting for case where bkg_for_ref measured but ref not: 
-        if self.referenced.isChecked()==False and self.background_subtracted_ref.isChecked()==True:
-            scaled_ref_bkg_subtract = np.ones(len(a_spectrum))
-            
-        #calculate processed spectrum
-        processed_spectrum = (a_spectrum - scaled_bkg)/(scaled_ref_bkg_subtract)
-        return processed_spectrum 
-        
 
-    def update_display(self, spectrum):
-        #replace any Nan in input spectrum with a 0
-        spectrum = np.array([0 if np.isnan(i) else i for i in spectrum])
-        #empty the display each time so that only most recent plot is shown
-        self.spec_plot.clear()
-        self.spec_plot.plot(self.wl_in_nm, spectrum)
+        #scale bkg/ref spectra according to ratio of integration times with data spectrum being processed
+        bkg_for_ref_scaling_factor = self.OOspectrometer.integration_time/self.OOspectrometer.background_int_ref
+        bkg_scaling_factor  =  (self.OOspectrometer.integration_time/self.OOspectrometer.background_int)
+        ref_scaling_factor  = (self.OOspectrometer.integration_time/self.OOspectrometer.reference_int)
+        
+        #if no bkg for ref taken, just use zeros
+        if self.background_subtracted_ref.isChecked()==False:
+            self.OOspectrometer.background_ref = np.zeros(len(a_spectrum))
+        #if no reference taken, just used ones
+        if self.referenced.isChecked()==False:
+            ref_with_bkg_subtracted = np.ones(len(a_spectrum))
+        #if reference has been taken, subtract bkg for ref (both quantities scaled according to integration times)    
+        elif self.referenced.isChecked()==True:
+            ref_with_bkg_subtracted  = (self.OOspectrometer.reference * ref_scaling_factor) - (self.OOspectrometer.background_ref * bkg_for_ref_scaling_factor)
+            #check whether white or metal reference is used - use/don't use ratio curve accordingly
+            if self.referencing_type == 'Gold':
+                ref_with_bkg_subtracted  = ref_with_bkg_subtracted * self.ratio_curve_values 
+
+        #calculate processed spectrum
+        if self.background_subtracted.isChecked()==False:
+            scaled_bkg = np.zeros(len(a_spectrum))
+        elif self.background_subtracted.isChecked()==True:
+            scaled_bkg = self.OOspectrometer.background * bkg_scaling_factor
+        processed_spectrum = (a_spectrum - scaled_bkg)/(ref_with_bkg_subtracted)
+
+        return processed_spectrum 
 
     """connect spectrometer control and readout buttons"""
     def gui_set_tec_temperature(self):
@@ -462,7 +461,12 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
     def gui_set_integration_time(self):
         self.OOspectrometer.integration_time = float(self.set_integration_time_LineEdit.text().strip())
         self.OOspectrometer.set_integration_time(self.OOspectrometer.integration_time)
+        #introduce wait with aim of avoiding weird glitch with spectrum update
+        time.sleep(self.OOspectrometer.integration_time/1000)
+        print(' ')
         print('Intergration time set to: '+str(self.OOspectrometer.integration_time))
+        
+        
         
     def reference_choice_toggle(self, state):
         sender = self.sender()
@@ -507,7 +511,7 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         print('Solenoid params =  '+str(self.current_field) + ' T and ' + str(self.current_temp) + ' K.')        
         
         
-    def take_t_series(self):
+    def t_series_method(self):
         # num_spectra_spinBox = box containing num spectra to be taken in t-series
         # time_delay_SpinBox =  box containing time delay to be between spectra
         # time_series_name_lineEdit = text box containing name to save t-series under
@@ -520,18 +524,22 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         
         spectrum_counter = 0
         time_counter = 0
+        print(' ')
         print('  BEGIN TIME SERIES')
         print('t_series_delay = '+str(t_series_delay*1000)+' ms.')
         print(' self.OOspectrometer.integration_time = '+str(self.OOspectrometer.integration_time)+' ms.')
+        print(' - - -')
         while spectrum_counter < t_series_num_spec:
+            print('spectrum_counter   = '+str(spectrum_counter ))
+            print('time_counter   = '+str(time_counter ))
             self.take_spec()
             self.t_series_times             = self.t_series_times             + [time_counter ]
             self.raw_t_series_spectra       = self.raw_t_series_spectra       + [self.current_raw_spec]
             self.processed_t_series_spectra = self.processed_t_series_spectra + [self.current_processed_spec]
             time.sleep(t_series_delay)
             time_counter = time_counter + self.OOspectrometer.integration_time + (t_series_delay*1000)
-            print('spectrum_counter   = '+str(spectrum_counter ))
             spectrum_counter  = spectrum_counter + 1
+            print(' - ')
 
         activeTSeriesDataset = self.time_series_group.create_dataset('SpectrumTimeSeries_%d', data = self.raw_t_series_spectra)
         
@@ -553,6 +561,7 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         activeTSeriesDataset.attrs.create('solenoid temperature', self.current_temp)
         activeTSeriesDataset.attrs.create('solenoid field', self.current_field)
         print('  END TIME SERIES')
+        print(' ')
         
     """END: methods for use with OO spectrometer"""
             
@@ -563,34 +572,53 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         self.stack_num_steps = int(self.num_steps_box.value())
         
         global z_stack_running
-        z_stack_running = 1
-        
-
+        z_stack_running = True
+        """
         if self.stage_enabled == 'Cryostat stage':
             initial_z = smaract_package.GetProperty_i64(self.Smaract_stage, 1, smaract_package.Property.POSITION)
         elif self.stage_enabled == 'Olympus stage':
-            initial_z =self.SMC_stage.get_position(3)
+            global stage_in_use
+            while stage_in_use==True:
+                pass
+            if stage_in_use==False:
+                initial_z =self.SMC_stage.get_position(3)"""
                 
         self.processed_stack_spectra = []
         self.raw_stack_spectra = []
         step_num=0
+        print(' ' )
+        print('BEGIN Z STACK')
         while step_num < self.stack_num_steps:
+            print('step_num = '+str(step_num))
+            #take_spec() method uses sub_take_spec class to run parallel thread for read_spectrum() instruction to the spectrometer
             self.take_spec()
-            global finished_OO
-            while finished_OO < 1:
+            #after taking 1st spec: store stage z as initial position
+            if step_num==0:
+                initial_z = self.current_z_position
+            #check OO_spectrometer_in_use--> will change from True to False once spectrometer ifs finished reading the spectrum
+            global OO_spectrometer_in_use
+            while OO_spectrometer_in_use == True:
                 pass
-            if finished_OO==1:
-                if self.stage_enabled == 'Cryostat stage':
-                    self.smaract_move(1, self.stack_step_size*(-1))
-                elif self.stage_enabled == 'Olympus stage':
-                    print(' ')
-                    print('z stack implementation with olympus stage not yet tested')
-                    self.SMC100_move_zaxis(self.stack_step_size)
+            if OO_spectrometer_in_use == False:
+                #once spectrum finished, move to new z for next spectrum
+                #if on final spectrum, do not move z position
+                if step_num==self.stack_num_steps:
+                    pass
+                elif step_num!=self.stack_num_steps:
+                    if self.stage_enabled == 'Cryostat stage':
+                        self.smaract_move(1, self.stack_step_size*(-1))
+                    elif self.stage_enabled == 'Olympus stage':
+                        self.SMC100_move_zaxis(self.stack_step_size)
+                #save information gathered on this z_increment
                 self.processed_stack_spectra = self.processed_stack_spectra + [self.current_processed_spec]
                 self.raw_stack_spectra = self.raw_stack_spectra + [self.current_raw_spec]
                 self.stack_plot.plot(self.wl_in_nm, self.current_processed_spec)
+                #increment step counter
                 step_num = step_num+1
-            
+        print('END Z STACK')
+        print(' ' )
+        
+        #save the raw spectra as dataset, and save other relevant info as attributes to the dataset
         activeStackDataset = self.Stacked_Spectra_group.create_dataset('stackedDFSpectra_%d', data = self.raw_stack_spectra)
         activeStackDataset.attrs.create('stack step size', self.stack_step_size)
         activeStackDataset.attrs.create('stack step number', self.stack_num_steps)
@@ -598,12 +626,7 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         activeStackDataset.attrs.create('Integration_Time', self.OOspectrometer.integration_time)
         activeStackDataset.attrs.create("Initial z position", initial_z)
         
-        if self.stage_enabled == 'Cryostat stage':
-            final_z = smaract_package.GetProperty_i64(self.Smaract_stage, 1, smaract_package.Property.POSITION)
-        elif self.stage_enabled == 'Olympus stage':
-            final_z=self.SMC_stage.get_position(3)
-            
-        
+        final_z = self.current_z_position
         activeStackDataset.attrs.create("Final z position", final_z)
         self.read_spec_description()
         activeStackDataset.attrs.create("Description", self.current_spec_description)
@@ -618,8 +641,10 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         
         activeStackDataset.attrs.create('solenoid temperature', self.current_temp)
         activeStackDataset.attrs.create('solenoid field', self.current_field)
+        
+        
         self.make_stack_plot()
-
+        
         #TRUNG TO DO TEST IPS
             
     def make_stack_plot(self):
@@ -648,7 +673,7 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
             print('Smaract stage disconnected.')
         elif self.stage_enabled == 'Olympus stage':
             self.SMC_stage.__del__()
-            print('Olynpus stage disconnected.')
+            print('Olympus stage disconnected.')
             
     def smaract_set_movemode(self, channel, smaract_movemode):
         if smaract_movemode == smaract_package.MoveMode.STEP:
@@ -751,52 +776,91 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
 
     def initialise_SMC100(self):
         do_initialise = sub_initialise_stage(self.SMC_stage)
-        self.pool.start(do_initialise)
+        global stage_in_use
+        stage_in_use =True
+        self.pool.start(do_initialise) #once initialisation is finished, stage_in_use is set to False
         
     def SMC100_move_left(self):
         axis = 1
-        move_amount = float(self.xystep_Box.value())*100/1e6
-        do_move = sub_SMC100_move(self.SMC_stage, str(axis), move_amount)
-        self.pool.start(do_move)
+        goto_value = float(self.xystep_Box.value())*100/1e6
+        global stage_in_use
+        while stage_in_use==True:
+            pass
+        if stage_in_use==False:
+            do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
+            stage_in_use =True
+            self.pool.start(do_move)
     
     def SMC100_move_right(self):
         axis = 1
         goto_value = -float(self.xystep_Box.value())*100/1e6
-        do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
-        self.pool.start(do_move)
+        global stage_in_use
+        while stage_in_use==True:
+            pass
+        if stage_in_use==False:
+            do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
+            stage_in_use =True
+            self.pool.start(do_move)
     
     def SMC100_move_up(self):
         axis = 2
         goto_value = float(self.xystep_Box.value())*100/1e6
-        do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
-        self.pool.start(do_move)
+        global stage_in_use
+        while stage_in_use==True:
+            pass
+        if stage_in_use==False:
+            do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
+            stage_in_use =True
+            self.pool.start(do_move)
     
     def SMC100_move_down(self):
         axis = 2
         goto_value = -float(self.xystep_Box.value())*100/1e6
-        do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
-        self.pool.start(do_move)
+        global stage_in_use
+        while stage_in_use==True:
+            pass
+        if stage_in_use==False:
+            do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
+            stage_in_use =True
+            self.pool.start(do_move)
 
     def SMC100_move_towardslens(self):
         axis = 3
         goto_value = float(self.zstep_box.value())*50/1e6
-        do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
-        self.pool.start(do_move)
+        global stage_in_use
+        while stage_in_use==True:
+            pass
+        if stage_in_use==False:
+            do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
+            stage_in_use =True
+            self.pool.start(do_move)
     
     def SMC100_move_awaylens(self):
         axis = 3
         goto_value = -float(self.zstep_box.value())*50/1e6
-        do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
-        self.pool.start(do_move)
+        global stage_in_use
+        while stage_in_use==True:
+            pass
+        if stage_in_use==False:
+            do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
+            stage_in_use =True
+            self.pool.start(do_move)
         
     def SMC100_move_zaxis(self, step_size):
         axis = 3
         goto_value = -float(step_size)*50/1e6
-        do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
-        self.pool.start(do_move)
+        global stage_in_use
+        while stage_in_use==True:
+            pass
+        if stage_in_use==False:
+            do_move = sub_SMC100_move(self.SMC_stage, str(axis), goto_value)
+            stage_in_use =True
+            self.pool.start(do_move)
         
     def SMC100_move_mid(self):
         do_move_mid = sub_SMC100_move_mid(self.SMC_stage)
+        global stage_in_use
+        stage_in_use =True
         self.pool.start(do_move_mid)
         
     def print_stage_positions(self):
@@ -815,15 +879,17 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
             print('     - - - - -     ')
             
         elif self.stage_enabled == 'Olympus stage':
-            print('          ')
-            print('Olympus stage positions:')
-            print('     - - - - -     ')
-            print('left/right axis = '+str(self.SMC_stage.get_position(1))+'mm (moves in 100nm increments)')
-            print('up/down axis = '+str(self.SMC_stage.get_position(2))+'mm (moves in 100nm increments)')
-            print('z-axis = '+str(self.SMC_stage.get_position(3))+'mm (moves in 50nm increments)')
-            print('     - - - - -     ')
-            
-
+            global stage_in_use
+            while stage_in_use==True:
+                pass
+            if stage_in_use==False:
+                print('          ')
+                print('Olympus stage positions:')
+                print('     - - - - -     ')
+                print('left/right axis = '+str(self.SMC_stage.get_position(1))+'mm (moves in 100nm increments)')
+                print('up/down axis = '+str(self.SMC_stage.get_position(2))+'mm (moves in 100nm increments)')
+                print('z-axis = '+str(self.SMC_stage.get_position(3))+'mm (moves in 50nm increments)')
+                print('     - - - - -     ')
         
     """END: methods for control of stages"""
         
@@ -872,9 +938,6 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         print('Ocean Optics successfully disconnected')
         
 
-        
-        
-
     def make_window(self):
         app = get_qt_app()
         self.show()
@@ -887,18 +950,11 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
 
 
 
-
-
-
-
-
-
 """helper class for spectrometer"""
 class sub_take_spec(QRunnable):
     #this class uses a seperate thread while taking a spectrum.
     def __init__(self, OOspectrometer):
         super().__init__()
-        # this is local access to OOspectrometer. "self" here is the "sub_take_spec"
         self.OOspectrometer = OOspectrometer
     
     def run(self):
@@ -910,30 +966,24 @@ class sub_take_spec(QRunnable):
 """start: helper classes for SMC100 stage"""
 class sub_SMC100_move(QRunnable):
     def __init__(self, SMC100, axis, value):
-        #axis is a string and value is absolute position 
         super().__init__()
         self.SMC100 = SMC100
         self.axis = axis
         self.value = value        
-        global stage_in_use
         
     def run(self):
+        print(' --> Moving SMC100')
+        #execute movement
+        initial_position = self.SMC100.get_position(self.axis)
+        target_position= float(initial_position[0]) + self.value
+        self.SMC100.move(target_position, self.axis, relative=False)
+        final_position= self.SMC100.get_position(self.axis)
+        #mark stage as no longer in use
         global stage_in_use
-        if stage_in_use ==True:
-            print('Wait for stage release')
-        while stage_in_use ==True:            
-            time.sleep(0.5)
-        print(' ')
-        print('Moving SMC100')
-        stage_in_use = True
-        pos_stage = self.SMC100.get_position(self.axis)
-        goto_pos = float(pos_stage[0]) + self.value
-        self.SMC100.move(goto_pos, self.axis, relative=False)
-        pos_stage = self.SMC100.get_position(self.axis)
-        print('Position axis ' + str(self.axis) + ': ' + str(pos_stage) + ' mm')
         stage_in_use = False 
+        #print updated info
+        print('Position axis ' + str(self.axis) + ': ' + str(final_position) + ' mm')
         
-
         
         
 class sub_SMC100_move_mid(QRunnable):
@@ -942,21 +992,15 @@ class sub_SMC100_move_mid(QRunnable):
         self.SMC100 = SMC100
 
     def run(self):
-        global stage_in_use
-        if stage_in_use ==True:
-            print('Wait for stage release')
-        while stage_in_use ==True:            
-            time.sleep(0.5)
-            print(' ')
         print('Moving to midpoint of stage range of motion.')
-        stage_in_use = True
-        
         self.SMC100.move(6, '1', relative=False)
         self.SMC100.move(6, '2', relative=False)
         self.SMC100.move(6, '3', relative=False)
-        print('Stage all axes moved to position 6 mm')
-        print(' ')
+        global stage_in_use
         stage_in_use = False 
+        print('All axes of stage moved to position = 6 mm.')
+        print(' ')
+        
         
         
 class sub_initialise_stage(QRunnable):
@@ -965,8 +1009,12 @@ class sub_initialise_stage(QRunnable):
         self.SMC100 = SMC100
 
     def run(self):
+        print(' ')
+        print('Wait for stage initialisation...')
         self.SMC100.reset_and_configure()
         self.SMC100.home()
+        global stage_in_use
+        stage_in_use =False
         print(' ')
         print('Stage initialised successfully')
         print(self.SMC100.get_position(1))
