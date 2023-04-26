@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1165</width>
-    <height>687</height>
+    <width>1202</width>
+    <height>936</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <x>0</x>
      <y>10</y>
      <width>471</width>
-     <height>251</height>
+     <height>261</height>
     </rect>
    </property>
    <property name="sizePolicy">
@@ -324,10 +324,17 @@
       </item>
      </layout>
     </item>
+    <item>
+     <widget class="QPushButton" name="OO_disconnect_button">
+      <property name="text">
+       <string>Ocean Optics disconnect</string>
+      </property>
+     </widget>
+    </item>
    </layout>
    <zorder></zorder>
    <zorder>horizontalSpacer_9</zorder>
-   <zorder></zorder>
+   <zorder>OO_disconnect_button</zorder>
   </widget>
   <widget class="QGroupBox" name="Spectrometer_display">
    <property name="geometry">
@@ -424,26 +431,13 @@
     </item>
    </layout>
   </widget>
-  <widget class="QPushButton" name="OO_disconnect_button">
-   <property name="geometry">
-    <rect>
-     <x>260</x>
-     <y>660</y>
-     <width>191</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Ocean Optics disconnect</string>
-   </property>
-  </widget>
   <widget class="QGroupBox" name="Stage_Group">
    <property name="geometry">
     <rect>
      <x>10</x>
      <y>280</y>
      <width>471</width>
-     <height>141</height>
+     <height>261</height>
     </rect>
    </property>
    <property name="sizePolicy">
@@ -455,8 +449,195 @@
    <property name="title">
     <string>Stage Controls</string>
    </property>
-   <layout class="QHBoxLayout" name="horizontalLayout_4">
-    <item>
+   <layout class="QGridLayout" name="gridLayout_7">
+    <item row="1" column="1">
+     <widget class="QGroupBox" name="Stack_controls_Group">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="title">
+       <string>Z stack Controls</string>
+      </property>
+      <widget class="QWidget" name="figure_widget_stack" native="true">
+       <property name="geometry">
+        <rect>
+         <x>6</x>
+         <y>64</y>
+         <width>389</width>
+         <height>41</height>
+        </rect>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
+      <widget class="QWidget" name="gridLayoutWidget">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>10</y>
+         <width>126</width>
+         <height>80</height>
+        </rect>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="1" column="1">
+         <widget class="QSpinBox" name="zstep_box_2">
+          <property name="maximum">
+           <number>500</number>
+          </property>
+          <property name="value">
+           <number>1</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_5">
+          <property name="text">
+           <string>Z step size</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QPushButton" name="take_z_stack_button">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Run z-stack</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_6">
+          <property name="text">
+           <string>Num steps</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QSpinBox" name="num_steps_box">
+          <property name="maximum">
+           <number>500</number>
+          </property>
+          <property name="value">
+           <number>1</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QGroupBox" name="Stack_controls_Group_2">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="title">
+       <string>Z stack Setpoint</string>
+      </property>
+      <widget class="QWidget" name="figure_widget_stack_2" native="true">
+       <property name="geometry">
+        <rect>
+         <x>6</x>
+         <y>64</y>
+         <width>389</width>
+         <height>41</height>
+        </rect>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
+      <widget class="QWidget" name="gridLayoutWidget_3">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>10</y>
+         <width>191</width>
+         <height>83</height>
+        </rect>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_9">
+        <item row="1" column="0">
+         <widget class="QPushButton" name="Go_To_z_setpoint_button">
+          <property name="text">
+           <string>Go To </string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QPushButton" name="Set_New_z_setpoint_button">
+          <property name="text">
+           <string>Set New</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLCDNumber" name="Current_z_setpoint_display">
+          <property name="frameShape">
+           <enum>QFrame::WinPanel</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Plain</enum>
+          </property>
+          <property name="digitCount">
+           <number>7</number>
+          </property>
+          <property name="segmentStyle">
+           <enum>QLCDNumber::Flat</enum>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QPushButton" name="stage_mtoward_button">
+        <property name="text">
+         <string>Toward sample</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="zstep_box">
+        <property name="maximum">
+         <number>500</number>
+        </property>
+        <property name="value">
+         <number>1</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="stage_maway_button">
+        <property name="text">
+         <string>Away sample</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout">
       <item row="4" column="2">
        <widget class="QPushButton" name="stage_mdown_button">
@@ -529,135 +710,13 @@
       </item>
      </layout>
     </item>
-    <item>
-     <layout class="QVBoxLayout" name="verticalLayout">
-      <item>
-       <widget class="QPushButton" name="stage_mtoward_button">
-        <property name="text">
-         <string>Toward sample</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QSpinBox" name="zstep_box">
-        <property name="maximum">
-         <number>500</number>
-        </property>
-        <property name="value">
-         <number>1</number>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="stage_maway_button">
-        <property name="text">
-         <string>Away sample</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
    </layout>
-  </widget>
-  <widget class="QGroupBox" name="Stack_controls_Group">
-   <property name="geometry">
-    <rect>
-     <x>290</x>
-     <y>440</y>
-     <width>171</width>
-     <height>101</height>
-    </rect>
-   </property>
-   <property name="sizePolicy">
-    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-     <horstretch>0</horstretch>
-     <verstretch>0</verstretch>
-    </sizepolicy>
-   </property>
-   <property name="title">
-    <string>Z stack Controls</string>
-   </property>
-   <widget class="QWidget" name="figure_widget_stack" native="true">
-    <property name="geometry">
-     <rect>
-      <x>6</x>
-      <y>64</y>
-      <width>389</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <property name="sizePolicy">
-     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-      <horstretch>0</horstretch>
-      <verstretch>0</verstretch>
-     </sizepolicy>
-    </property>
-   </widget>
-   <widget class="QWidget" name="gridLayoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>10</y>
-      <width>126</width>
-      <height>80</height>
-     </rect>
-    </property>
-    <layout class="QGridLayout" name="gridLayout_5">
-     <item row="1" column="1">
-      <widget class="QSpinBox" name="zstep_box_2">
-       <property name="maximum">
-        <number>500</number>
-       </property>
-       <property name="value">
-        <number>1</number>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_5">
-       <property name="text">
-        <string>Z step size</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QPushButton" name="take_z_stack_button">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>Run z-stack</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_6">
-       <property name="text">
-        <string>Num steps</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QSpinBox" name="num_steps_box">
-       <property name="maximum">
-        <number>500</number>
-       </property>
-       <property name="value">
-        <number>1</number>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
   </widget>
   <widget class="QGroupBox" name="Temperature_Group">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>440</y>
+     <x>20</x>
+     <y>550</y>
      <width>271</width>
      <height>91</height>
     </rect>
@@ -758,8 +817,8 @@
   <widget class="QGroupBox" name="Magnet_Group">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>550</y>
+     <x>30</x>
+     <y>660</y>
      <width>411</width>
      <height>101</height>
     </rect>

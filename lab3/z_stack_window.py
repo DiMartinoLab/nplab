@@ -79,7 +79,7 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         #save spectra here, with addintional info such as stage location and cryostat params also saved.
         self.OO_Spectra_group= self.StackGUI_df_group.create_group(name='OO Spectra', auto_increment=True)
         self.Stacked_Spectra_group = self.StackGUI_df_group.create_group(name='Stacked Spectra', auto_increment=True)
-        self.time_series_group = self.StackGUI_df_group.create_group(name='spectrum time series ', auto_increment=True)
+        self.time_series_group = self.StackGUI_df_group.create_group(name='spectrum time series', auto_increment=True)
         self.ratio_curve_values = [item[1] for item in ratio_curve_points]
         self.OO_Spectra_group.attrs.create('Ratio_curve', self.ratio_curve_values)
 
@@ -137,7 +137,15 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         
         """setup stage controls and display - using olympus OR smaract"""
         self.disconnect_stage_button.clicked.connect(self.disconnect_stage)
+        
         # dmk50 April 2023
+        
+        #buttons and display for z setpoint
+        self.Set_New_z_setpoint_button.clicked.connect(self.Set_New_z_setpoint)
+        self.current_z_setpoint = 0
+        self.Go_To_z_setpoint_button.clicked.connect(self.Go_To_z_setpoint)
+        self.Current_z_setpoint_display.display(float(self.current_z_setpoint))
+            
         if stage_enabled == 'Olympus stage':
             global stage_in_use
             stage_in_use = False
@@ -158,6 +166,8 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
             self.stage_mmid_button.clicked.connect(self.SMC100_move_mid)
             #setup button to print stage position 
             self.get_stage_position_button.clicked.connect(self.print_stage_positions)
+            
+            
             
         
         # Trung Nov. 2022
@@ -431,9 +441,11 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         
         #if no bkg for ref taken, just use zeros
         if self.background_subtracted_ref.isChecked()==False:
+            print('note - no bkg for ref has been stored')
             self.OOspectrometer.background_ref = np.zeros(len(a_spectrum))
         #if no reference taken, just used ones
         if self.referenced.isChecked()==False:
+            print('note - no ref has been stored')
             ref_with_bkg_subtracted = np.ones(len(a_spectrum))
         #if reference has been taken, subtract bkg for ref (both quantities scaled according to integration times)    
         elif self.referenced.isChecked()==True:
@@ -444,6 +456,7 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
 
         #calculate processed spectrum
         if self.background_subtracted.isChecked()==False:
+            print('note - no bkg has been stored')
             scaled_bkg = np.zeros(len(a_spectrum))
         elif self.background_subtracted.isChecked()==True:
             scaled_bkg = self.OOspectrometer.background * bkg_scaling_factor
@@ -548,9 +561,10 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         activeTSeriesDataset.attrs.create("Wavelengths", self.wl_in_nm)
         activeTSeriesDataset.attrs.create('Integration_Time', self.OOspectrometer.integration_time)         
         activeTSeriesDataset.attrs.create("z-position", self.current_z_position)
-        activeTSeriesDataset.attrs.create("T series name", t_series_name)
         #activeTSeriesDataset.attrs.create("Processed Spectra", self.processed_t_series_spectra )
         
+        self.read_spec_description()
+        activeTSeriesDataset.attrs.create("Description", self.current_spec_description)
         activeTSeriesDataset.attrs.create('bkg_for_ref_int_t', self.OOspectrometer.background_int_ref)
         activeTSeriesDataset.attrs.create('bkg_int_t', self.OOspectrometer.background_int)
         activeTSeriesDataset.attrs.create('ref_int_t', self.OOspectrometer.reference_int)
@@ -570,18 +584,10 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         self.stack_plot.clear()
         self.stack_step_size = int(self.zstep_box_2.value())
         self.stack_num_steps = int(self.num_steps_box.value())
+        self.stack_z_values= []
         
         global z_stack_running
         z_stack_running = True
-        """
-        if self.stage_enabled == 'Cryostat stage':
-            initial_z = smaract_package.GetProperty_i64(self.Smaract_stage, 1, smaract_package.Property.POSITION)
-        elif self.stage_enabled == 'Olympus stage':
-            global stage_in_use
-            while stage_in_use==True:
-                pass
-            if stage_in_use==False:
-                initial_z =self.SMC_stage.get_position(3)"""
                 
         self.processed_stack_spectra = []
         self.raw_stack_spectra = []
@@ -595,13 +601,14 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
             #after taking 1st spec: store stage z as initial position
             if step_num==0:
                 initial_z = self.current_z_position
-            #check OO_spectrometer_in_use--> will change from True to False once spectrometer ifs finished reading the spectrum
+            #for all steps, store z_position 
+            self.stack_z_values = self.stack_z_values + [self.current_z_position]
+            #check OO_spectrometer_in_use--> will change from True to False once spectrometer is finished reading the spectrum
             global OO_spectrometer_in_use
             while OO_spectrometer_in_use == True:
                 pass
             if OO_spectrometer_in_use == False:
-                #once spectrum finished, move to new z for next spectrum
-                #if on final spectrum, do not move z position
+                #once spectrum finished, move to new z for next spectrum (unless on final spec)
                 if step_num==self.stack_num_steps:
                     pass
                 elif step_num!=self.stack_num_steps:
@@ -613,24 +620,26 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
                 self.processed_stack_spectra = self.processed_stack_spectra + [self.current_processed_spec]
                 self.raw_stack_spectra = self.raw_stack_spectra + [self.current_raw_spec]
                 self.stack_plot.plot(self.wl_in_nm, self.current_processed_spec)
+                
                 #increment step counter
                 step_num = step_num+1
         print('END Z STACK')
         print(' ' )
+        final_z = self.current_z_position
         
         #save the raw spectra as dataset, and save other relevant info as attributes to the dataset
         activeStackDataset = self.Stacked_Spectra_group.create_dataset('stackedDFSpectra_%d', data = self.raw_stack_spectra)
         activeStackDataset.attrs.create('stack step size', self.stack_step_size)
         activeStackDataset.attrs.create('stack step number', self.stack_num_steps)
-        activeStackDataset.attrs.create("Wavelengths", self.wl_in_nm)
-        activeStackDataset.attrs.create('Integration_Time', self.OOspectrometer.integration_time)
+        activeStackDataset.attrs.create('stack z values', self.stack_z_values )
         activeStackDataset.attrs.create("Initial z position", initial_z)
-        
-        final_z = self.current_z_position
         activeStackDataset.attrs.create("Final z position", final_z)
+        
         self.read_spec_description()
         activeStackDataset.attrs.create("Description", self.current_spec_description)
-        activeStackDataset.attrs.create("Processed Spectra", self.processed_stack_spectra )
+        activeStackDataset.attrs.create("Wavelengths", self.wl_in_nm)
+        activeStackDataset.attrs.create('Integration_Time', self.OOspectrometer.integration_time)
+        #activeStackDataset.attrs.create("Processed Spectra", self.processed_stack_spectra )
         
         activeStackDataset.attrs.create('bkg_for_ref_int_t', self.OOspectrometer.background_int_ref)
         activeStackDataset.attrs.create('bkg_int_t', self.OOspectrometer.background_int)
@@ -642,13 +651,11 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         activeStackDataset.attrs.create('solenoid temperature', self.current_temp)
         activeStackDataset.attrs.create('solenoid field', self.current_field)
         
-        
         self.make_stack_plot()
-        
-        #TRUNG TO DO TEST IPS
+
             
     def make_stack_plot(self):
-        spec_nums = np.arange(0,self.stack_num_steps,1)
+        spec_nums = np.arange(0, self.stack_num_steps, 1)
         spectra_T = np.transpose(self.processed_stack_spectra)
         plt.pcolormesh(spec_nums, self.wl_in_nm, spectra_T, shading = 'auto', norm = colors.SymLogNorm(base = np.e, linthresh = 0.5, linscale = 0.05, vmin = -0.5, vmax = 0.5))
         plt.clim(0,0.1)
@@ -665,7 +672,6 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
     # self.Smaract_stage = d_handle
   
     
-    
     """START: methods for control of stages"""
     def disconnect_stage(self):
         if self.stage_enabled == 'Cryostat stage':
@@ -675,6 +681,24 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
             self.SMC_stage.__del__()
             print('Olympus stage disconnected.')
             
+    def Set_New_z_setpoint(self):
+        #this will take current z co-ordinate and save it as self.current_z_setpoint 
+        if self.stage_enabled == 'Cryostat stage':
+            z_position = smaract_package.GetProperty_i64(self.Smaract_stage, 1, smaract_package.Property.POSITION)
+        elif self.stage_enabled == 'Olympus stage':
+            z_position = self.SMC_stage.get_position(3)
+        self.current_z_setpoint = z_position[0]
+        self.Current_z_setpoint_display.display(float(self.current_z_setpoint))
+        
+    def Go_To_z_setpoint(self):
+        if self.stage_enabled == 'Cryostat stage':
+            print('setpoint not yet impletmented for cryostat stage')
+        elif self.stage_enabled == 'Olympus stage':
+            self.SMC_stage.move(self.current_z_setpoint, '3', relative=False)
+            print('SMC stage returned to z-axis setpoint')
+            print('Position axis 3: ' + str(self.current_z_setpoint) + ' mm')
+            
+
     def smaract_set_movemode(self, channel, smaract_movemode):
         if smaract_movemode == smaract_package.MoveMode.STEP:
             # Change movement mode to step movement
@@ -868,7 +892,6 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         #note - need to add units to position values
         
         if self.stage_enabled == 'Cryostat stage':
-            print('Smaract stage positions: current view = '+str(self.stage_feature_button.text()))
             z_position = smaract_package.GetProperty_i64(self.Smaract_stage, 1, smaract_package.Property.POSITION)
             left_right_position = smaract_package.GetProperty_i64(self.Smaract_stage, self.smaract_channel_left, smaract_package.Property.POSITION)
             up_down_position = smaract_package.GetProperty_i64(self.Smaract_stage, self.smaract_channel_up, smaract_package.Property.POSITION)
@@ -936,7 +959,6 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
     def OO_disconnect(self):
         self.OOspectrometer._close()
         print('Ocean Optics successfully disconnected')
-        
 
     def make_window(self):
         app = get_qt_app()
@@ -985,7 +1007,6 @@ class sub_SMC100_move(QRunnable):
         print('Position axis ' + str(self.axis) + ': ' + str(final_position) + ' mm')
         
         
-        
 class sub_SMC100_move_mid(QRunnable):
     def __init__(self, SMC100):
         super().__init__()
@@ -1000,7 +1021,6 @@ class sub_SMC100_move_mid(QRunnable):
         stage_in_use = False 
         print('All axes of stage moved to position = 6 mm.')
         print(' ')
-        
         
         
 class sub_initialise_stage(QRunnable):
