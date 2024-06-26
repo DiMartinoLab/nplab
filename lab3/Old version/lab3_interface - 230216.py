@@ -32,6 +32,7 @@ from nplab.ui.ui_tools import QtWidgets
 
 import smaract.ctl as smaract_package
 from lab3.z_stack_window import z_stack_window_object
+from lab3.MercuryController import MercuryController
 from lab3.SMC100StageControl_zstack import SMC100_window_object
 #from lab3.OlympusCamera import OlympusCamera
 from nplab.instrument.mercuryUSB.mercuryUSB import temperatureController as MiC_package
@@ -74,10 +75,11 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         
 ###comment out software you are not going to use
 #        self.initialise_smu() #Keithley, for electrical measurements
+#
 #        self.initialise_SmarAct_stage() #piezo stage at cryostat       
 #        self.initialise_MercuryControllers(truth_value = True) # Mercury controller iTC and iPS-M. do not initialise if truth_value is input as false       
-        self.initialise_SMC100() #actuators for xy stage
-        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
+#        self.initialise_SMC100() #actuators for xy stage
+#        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
 #        self.initialise_camera() #Olympus camera
 #        self.initialise_shutter() #control box
 #        self.initialise_Kandor() #Kymera, for Raman with 633nm or 785nm laser #jks68 19/10/2021
@@ -97,10 +99,12 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.live_darkfield_spectrum_signal.connect(self.update_darkfield_spectrum_plot)
 #        self.andor_cooler_checkBox.toggled.connect(self.andor_cooler)
         self.UploadFile.clicked.connect(self.processradiantfile)
+        
         self.openstage.clicked.connect(self.open_SMC100_ui)
+        
         self.open_z_stack_window.clicked.connect(self.open_Dawn_z_stack_ui)
         self.OlympusCameraButton.clicked.connect(self.open_OlympusCamera)
-#        self.MercuryControllerButton.clicked.connect(self.open_MercuryController)
+        self.MercuryControllerButton.clicked.connect(self.open_MercuryController)
 #        self.myArduino.shutterIN() #To ensure shutter is closed
         
         
@@ -303,8 +307,8 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         
     def initialise_MercuryControllers(self, truth_value):
         if truth_value ==True:
-            self.MiTC_handle = MiC_package('COM5')
-            self.MiPS_handle = MiC_package('COM6')
+            self.MiTC_handle = MiC_package('COM4')
+            self.MiPS_handle = MiC_package('COM7')
         elif truth_value == False:
             self.MiTC_handle, self.MiPS_handle = None, None
         

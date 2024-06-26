@@ -6,35 +6,42 @@ Created on Jan 15 10:23:36 2019
 """
 
 import nplab
-
-from nplab.instrument.spectrometer.kandor import Kandor
-from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
+from nplab.instrument.camera.Andor.andor_sdk_rig2 import AndorBase
+from nplab.instrument.spectrometer.Kymera import Kymera
+from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer, OceanOpticsControlUI
 from nplab.instrument.electronics.keithley_2636b_smu import Keithley2636B as Keithley
-#from nplab.instrument.stage.smaract_mcs import SmaractMCSSerial
+# from nplab.instrument.stage.smaract_mcs import SmaractMCSSerial
 from nplab.instrument.shutter.Arduino_ttl_shutter import Arduino_tri_shutter as shutter
 from nplab.instrument.light_sources.matchbox_laser import MatchboxLaser
-
-from nplab.instrument.stage.SMC100 import SMC100
-
+from nplab.instrument.stage.SMC100_lib_zstack import SMC100
 import nplab.utils.gui 
 import nplab.datafile as datafile
 from nplab.instrument.spectrometer import Spectrometer
 from nplab.experiment import Experiment, ExperimentStopped
 from nplab.utils.notified_property import DumbNotifiedProperty, NotifiedProperty
-from nplab.utils.gui import QtCore, QtGui, uic, get_qt_app
+from nplab.utils.gui import QtCore, QtGui, uic, get_qt_app, show_widget, popup_widget
 from nplab.ui.ui_tools import UiTools
-#import Rotation_Stage as RS
-#import visa
 import os
 import time
 import threading
 import numpy as np
 import pyqtgraph as pg
+from pyqtgraph import PlotWidget, plot
+from PyQt5 import QtWidgets, uic
+
 from nplab.ui.ui_tools import QtWidgets
 
+import smaract.ctl as smaract_package
+from lab3.z_stack_window import z_stack_window_object
+from lab3.RamanSpectrometer import RamanSpectrometer
+from lab3.testandor import testandor
+#from lab3.MercuryController import MercuryController
+from lab3.SMC100StageControl_zstack import SMC100_window_object
+#from lab3.OlympusCamera import OlympusCamera
+from nplab.instrument.mercuryUSB.mercuryUSB import temperatureController as MiC_package
+from lucam import Lucam
+import sys
 
-
-#myOceanOptics = OceanOpticsSpectrometer(0)
 
 class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     # To use auto_connect_by_name name all widgets using _WidgetType, e.g. Vhigh_DoubleSpinBox
@@ -65,22 +72,29 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         super(Lab3_experiment, self).__init__()
         uic.loadUi('lab3_interface_kymera.ui', self)
         
-###comment out software you are not going to use
+        # which stage is enabled 'Cryostat stage' or 'Olympus stage' to load
+        # into the z_stack UI
+        self.stage_enabled = '1'
+        
+        """comment out software you are not going to use """
 #        self.initialise_smu() #Keithley, for electrical measurements
-#        self.initialise_SmarAct_stage() #piezo stage for cantilever positioning##
+#
+        self.initialise_SmarAct_stage() #piezo stage at cryostat       
+        self.initialise_MercuryControllers(truth_value = False) # Mercury controller iTC and iPS-M. do not initialise if truth_value is input as false       
 #        self.initialise_SMC100() #actuators for xy stage
-
-#        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
+        self.initialise_OOSpectrometer() #for DF (white light) and PL (444nm laser)
+        self.initialise_Kandor()
+#        self.initialise_camera() #Olympus camera
 #        self.initialise_shutter() #control box
-#        self.initialise_z_stack()
-        self.initialise_Kandor() #Kymera, for Raman with 633nm or 785nm laser #jks68 19/10/2021
-      
+
+####end
         self.radiantvoltages=None
 
         self.setup_plot_widgets()
         
         self.activeDatafile = activeDatafile
         self.singleRamanSpectraGroup = self.create_data_group('Single Raman spectra')
+        self.z_stack_DataGroup = self.create_data_group('Data from z-stack window')
 
         self.auto_connect_by_name(self)
         
@@ -89,9 +103,16 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.live_darkfield_spectrum_signal.connect(self.update_darkfield_spectrum_plot)
 #        self.andor_cooler_checkBox.toggled.connect(self.andor_cooler)
         self.UploadFile.clicked.connect(self.processradiantfile)
+        
         self.openstage.clicked.connect(self.open_SMC100_ui)
-#        self.z_stack.clicked.connect(self.open_Dawn_z_stack_ui)
+        
+        self.open_z_stack_window.clicked.connect(self.open_Dawn_z_stack_ui)
+#        self.open_z_stack_window.clicked.connect(self.open_Dawn_z_stack_ui)
+        self.OlympusCameraButton.clicked.connect(self.open_OlympusCamera)
+        self.MercuryControllerButton.clicked.connect(self.open_MercuryController)
 #        self.myArduino.shutterIN() #To ensure shutter is closed
+        
+        
         
 #start of lab 3 experiment
     #TODO ALICE - go through this line by line
@@ -146,7 +167,6 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             self.smu.meas_current_range = float(self.Irange_comboBox.currentText())
             self.smu.src_voltage_limit = float(self.Vlimit_doubleSpinBox.value())
             self.smu.src_current_limit = float(self.Ilimit_doubleSpinBox.value())
-            
             #TEST BY THOMAS
             #adding attributes for electrical measurements
             activeDatagroup.attrs.create('CurrentRange', self.smu.meas_current_range)
@@ -164,49 +184,51 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             t0 = time.time()
             print("----- Measurement started -----")
             n=0
-            
-            actively_measuring = True
-            while actively_measuring:
+            while True:
                 self.smu.src_voltage = activeVoltage
                 #spectrum = self.spectrometer.read_spectrum(bundle_metadata=True)
                 if self.mode_smuOnly.isChecked():
                     self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
 
                     
-                    if (self.mode_RamanOnly.isChecked()):
-                        RamanSpectrum_thread = threading.Thread(target = self.acquire_Raman_spectrum )    # acquiring Raman spectrum in new thread
-                        RamanSpectrum_thread.start()
-                        spectraActiveTime = (time.time()-t0)
-                        activeDatagroup.append_dataset("RamanSpectra_times", spectraActiveTime)
-                        while RamanSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
-                            self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
-                        self.live_Raman_spectrum_signal.emit(self.RamanSpectrum)
-                        activeDatagroup.append_dataset("RamanSpectrum", self.RamanSpectrum)
-                    
-                    if (self.mode_DarkfieldOnly.isChecked()):
-                        DarkfieldSpectrum_thread = threading.Thread(target = self.acquire_darkfield_spectrum )    # acquiring Raman spectrum in new thread
-                        DarkfieldSpectrum_thread.start()
-                        spectraActiveTime = (time.time()-t0)
-                        activeDatagroup.append_dataset("darkfieldSpectra_times", spectraActiveTime)
-                        while DarkfieldSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
-                            self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
-                        self.live_darkfield_spectrum_signal.emit(self.darkfieldSpectrum)
-                        activeDatagroup.append_dataset("darkfieldSpectrum", self.darkfieldSpectrum)
-
-                    if (self.mode_PLOnly.isChecked()):
-                        DarkfieldSpectrum_thread = threading.Thread(target = self.acquire_darkfield_spectrum )    # acquiring Raman spectrum in new thread
-                        DarkfieldSpectrum_thread.start()
-                        spectraActiveTime = (time.time()-t0)
-                        activeDatagroup.append_dataset("PLSpectra_times", spectraActiveTime)
-                        while DarkfieldSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
-                            self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
-                        self.live_darkfield_spectrum_signal.emit(self.darkfieldSpectrum)
-                        activeDatagroup.append_dataset("PLSpectrum", self.darkfieldSpectrum)
-                        
-                    if (self.mode_RamanAndDarkfield.isChecked()):
-                        # nothing for now
-                        pass
+                if (self.mode_RamanOnly.isChecked()):
+                    RamanSpectrum_thread = threading.Thread(target = self.acquire_Raman_spectrum )    # acquiring Raman spectrum in new thread
+                    RamanSpectrum_thread.start()
+                    spectraActiveTime = (time.time()-t0)
+                    activeDatagroup.append_dataset("RamanSpectra_times", spectraActiveTime)
+                    while RamanSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
+                        self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
+                    self.live_Raman_spectrum_signal.emit(self.RamanSpectrum)
+                    activeDatagroup.append_dataset("RamanSpectrum", self.RamanSpectrum)
                 
+                if (self.mode_DarkfieldOnly.isChecked()):
+                    print('step 1')
+                    DarkfieldSpectrum_thread = threading.Thread(target = self.acquire_darkfield_spectrum )    # acquiring Raman spectrum in new thread
+                    DarkfieldSpectrum_thread.start()
+                    spectraActiveTime = (time.time()-t0)
+                    print('step 2')
+                    activeDatagroup.append_dataset("darkfieldSpectra_times", spectraActiveTime)
+                    print('step 3')
+                    while DarkfieldSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
+                        self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
+                    self.live_darkfield_spectrum_signal.emit(self.darkfieldSpectrum)
+                    print('step 4')
+                    activeDatagroup.append_dataset("darkfieldSpectrum", self.darkfieldSpectrum)
+
+                if (self.mode_PLOnly.isChecked()):
+                    DarkfieldSpectrum_thread = threading.Thread(target = self.acquire_darkfield_spectrum )    # acquiring Raman spectrum in new thread
+                    DarkfieldSpectrum_thread.start()
+                    spectraActiveTime = (time.time()-t0)
+                    activeDatagroup.append_dataset("PLSpectra_times", spectraActiveTime)
+                    while DarkfieldSpectrum_thread.isAlive():       # collect current measurements while spectrum is being acquired
+                        self.acquireIVdatapoint(activeVoltage, t0, activeDatagroup)
+                    self.live_darkfield_spectrum_signal.emit(self.darkfieldSpectrum)
+                    activeDatagroup.append_dataset("PLSpectrum", self.darkfieldSpectrum)
+                    
+                if (self.mode_RamanAndDarkfield.isChecked()):
+                    # nothing for now
+                    pass
+
                 if self.hold.isChecked():       # if hold checkbox is checked do not change the voltage
                     pass
                 else:                           # running in ramp or stepwise mode?
@@ -234,17 +256,12 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
                         #self.smu_wait = self.radianttimedelay*0.001
                         time.sleep((1/(40*self.Vlow) - 1/40)) #DLCC
                         if type(self.radiantvoltages)==np.ndarray:
-                            if n<self.radiantnopoints:
-                                #raise ExperimentStopped()
-                                activeVoltage = self.Vhigh * self.radiantvoltages[n]/100
-                                n+=1
-                            else:
-                                actively_measuring = False
-                                print("----- Voltage Profile Finished -----")
-                                self.activeDatafile.flush()
+                            if n==self.radiantnopoints:
+                                pass
+                            activeVoltage = self.Vhigh * self.radiantvoltages[n]/100
+                            n+=1
                         else:
                             print('no file selected')
-                            activeVoltage = 0
                             pass
                 self.wait_or_stop(self.smu_wait)
                 
@@ -259,8 +276,11 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 #end of lab 3 experiment
 
     def initialise_Kandor(self):
-        self.myKandor = Kandor()
-        print('Kymera initialised')     
+        self.Kymera = Kymera()
+        self.Andor = AndorBase()
+        camera_index = None
+        self.Andor.start(camera_index)
+        print('Kymera and Andor initialised')     
 
     def initialise_smu(self):
         self.smu = Keithley.get_instance(address = 'USB0::0x05E6::0x2634::4454529::INSTR')
@@ -271,13 +291,48 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.smu.src_current_limit = float(self.Ilimit_doubleSpinBox.value())
         
     def initialise_SmarAct_stage(self):
-        self.SmarAct_stage = SmaractMCSSerial('COM6',3)
+        # Trung Nov. 2022
+        # Code adapted from MSC2Example_DeviceInfo.py to control SmarAct stage
+        # in rig2 for cryostat measurement
+        try:
+            buffer = smaract_package.FindDevices()
+            if len(buffer) == 0:
+                print("MCS2 no devices found.")
+                sys.exit(1)
+            locators = buffer.split("\n")
+            for locator in locators:
+                print("MCS2 available devices: {}".format(locator))
+        except:
+            print("MCS2 failed to find devices. Exit.")
+            input()
+            sys.exit(1)
+        
+        # Open the first MCS2 device from the list
+        self.smaract_handle = smaract_package.Open(locators[0])
+        # smaract_handle_enabled or SMC_handle_enabled to check
+        # which stage z_stack_UI should load
+        # check open_Dawn_z_stack_ui
+        self.stage_enabled = 'Cryostat stage'
+        print("MCS2 opened {}.".format(locators[0]))
+        
+    def initialise_MercuryControllers(self, truth_value):
+        if truth_value ==True:
+            self.MiTC_handle = MiC_package('COM4')
+            self.MiPS_handle = MiC_package('COM7')
+        elif truth_value == False:
+            self.MiTC_handle, self.MiPS_handle = None, None
+        
+    def initialise_camera(self):
+        self.camera_handle = Lucam()
 
     def initialise_SMC100(self):
-        self.SMC100=SMC100('COM1', (1,2,3))     
-        
-    def initialise_z_stack(self):
-        self.z_stack_gui = z_stack()
+        self.SMC100_handle = SMC100('COM1', (1,2,3))
+        # smaract_handle_enabled or SMC_handle_enabled to check
+        # which stage z_stack_UI should load
+        # check open_Dawn_z_stack_ui
+        self.stage_enabled = 'Olympus stage'
+#    def initialise_z_stack(self):
+#        self.z_stack_gui = z_stack()
         
     def initialise_shutter(self):
         self.myShutter = shutter(port = 'COM4')
@@ -352,10 +407,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
             self.times_data = [timePlotInput]
             self.voltages_data = [voltagePlotInput]
             self.currents_data = [currentPlotInput]
-#            self.capacitance_data = [0]
-        else:
-            self.times_data.append(timePlotInput)
-            self.voltages_data.append(voltagePlotInput)
+#            self.capacitance_data = [0]imePlotInput)            self.voltages_data.append(voltagePlotInput)
             self.currents_data.append(currentPlotInput)
 #            if (len(self.voltages_data)>1):### we added this line and the next 2
 #                capacitance=currentPlotInput/((self.voltages_data[-1]-self.voltages_data[-2])/(self.times_data[-1]-self.times_data[-2]))
@@ -364,33 +416,76 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 #            else:
 #                self.capacitance_data.append(0)
 #                
-#        self.capacitance_plot.plot(self.voltages_data, self.capacitance_data, clear = True, pen = 'r')
+        self.capacitance_plot.plot(self.voltages_data, self.capacitance_data, clear = True, pen = 'r')
         self.electronics_plot.plot(self.times_data, self.currents_data, clear = True, pen = 'r')
         self.electronics_IVplot.plot(self.voltages_data, self.currents_data, clear = True, pen = 'r')
 
     def rampChangeDirection(self):
         self.voltageRampSign *= -1  
     
+    # This is SmarAct stage for rotation
     def open_SmarAct_UI(self):
         delattr(self,'SmarAct_stage')
         self.SmarAct_stage = SmaractMCSSerial('COM6',3)
-        self.SmarAct_stage.show_gui(blocking=False)
+        self.SmarAct_stage.show_gui(blocking = False)
 
     def open_Andor_UI(self):
-#        self.KandorControlUI = self.myKandor.show_gui(block = False)
-        self.KandorControlUI = self.myKandor.get_control_widget()
-        self.KandorPreviewUI = self.myKandor.get_preview_widget()
-        self.KandorControlUI.show()
-        self.KandorPreviewUI.show()
+##        self.KandorControlUI = self.myKandor.show_gui(block = False)
+#        self.KandorControlUI = self.myKandor.get_control_widget()
+#        self.KandorPreviewUI = self.myKandor.get_preview_widget()
+#        self.KandorControlUI.show()
+#        self.KandorPreviewUI.show()
+        window_object_andor = RamanSpectrometer(activeDatafile = activeDatafile, \
+                                          Kymera_handle = self.Kymera, \
+                                          Andor_handle = self.Andor)
+        self.this_ui_Andor = window_object_andor.make_window()
+        
+        window_object_testandor = testandor(activeDatafile = activeDatafile, \
+                                          Kymera_handle = self.Kymera, \
+                                          Andor_handle = self.Andor)
+        self.this_ui_testandor = window_object_testandor.make_window()
 
     def open_laser633_UI(self):
         self.laser633.show_gui()
         
     def open_SMC100_ui(self):
-        self.SMC100.show_gui()
+        window_object_SMC = SMC100_window_object(SMC100_instance = self.SMC100_handle)
+        self.this_ui_SMC = window_object_SMC.make_window()
 
     def open_Dawn_z_stack_ui(self):
-        self.z_stack_gui.show_gui()
+        print('THE Z-STACK BUTTON WAS CLICKED - '+self.OOspectrometer.get_model_name()+' was found.')
+        # Create an instance of our class
+        # if the temperature and magnet field controllers are not on
+        #try:
+         #   self.MiTC_handle
+        #except:
+         #   self.MiPS_handle = None
+          #  self.MiTC_handle = None
+            
+        # check which stage is on to load 'Cryostat stage' or 'Olympus stage'
+        print(self.stage_enabled)
+        if self.stage_enabled == 'Cryostat stage':
+            window_object_zstack = z_stack_window_object(activeDatafile=activeDatafile, \
+                                                OOSpect_instance=self.OOspectrometer, \
+                                                Stage_instance = self.smaract_handle, \
+                                                MiTC_instance = self.MiTC_handle, \
+                                                MiPS_instance = self.MiPS_handle, stage_enabled = self.stage_enabled)
+        elif self.stage_enabled == 'Olympus stage':
+            window_object_zstack = z_stack_window_object(activeDatafile=activeDatafile, \
+                                                OOSpect_instance=self.OOspectrometer, \
+                                                Stage_instance = self.SMC100_handle, \
+                                                MiTC_instance = None, MiPS_instance = None, stage_enabled = self.stage_enabled)
+        self.this_ui = window_object_zstack.make_window()
+        del window_object_zstack
+    def open_OlympusCamera(self):
+        print('Show me what you see camera!')
+        window_object_camera = OlympusCamera(self.camera_handle) # Create an instance of our class
+        self.this_ui = window_object_camera.make_window()
+        
+    def open_MercuryController(self):
+        print('Run cool measurements!')
+        window_object_MiTC = MercuryController(MiTC_handle = self.MiTC_handle) # Create an instance of our class
+        self.this_ui = window_object_MiTC.make_window()
         
     def acquireIVdatapoint(self, activeVoltage, t0, activeDatagroup):
         measuredCurrent = self.smu.read_current()
@@ -409,7 +504,10 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.RamanSpectrum = np.asarray(self.myKandor.capture()[0] )  # capture() retruns a tuple, converting to numpy array
         
     def acquire_darkfield_spectrum(self):
-        self.darkfieldSpectrum = np.asarray(self.OOspectrometer.read_processed_spectrum())
+#        self.darkfieldSpectrum = np.asarray(self.OOspectrometer.read_processed_spectrum())
+        print('do acquire DF')
+        self.darkfieldSpectrum = np.asarray(self.OOspectrometer.read_spectrum())
+        
         
     def SmarAct_rotate_left(self):   
         self.SmarAct_stage.close()  
@@ -471,18 +569,15 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
     
     def processradiantfile(self):
         #f= open("DLCC.txt", "r")
-        #f= open("1000Hz_0.0010ramp 0.0010delay.txt", "r") #normal PUND with large gaps between pulses
+        f= open("1000Hz_0.0010ramp 0.0010delay.txt", "r") #normal PUND with large gaps between pulses
         #f= open("constant-voltage-profile.txt", "r")
         #f = open("Thomas_shorter-PUND.txt", "r") #shorter PUND that reduces 0V gaps
-        v_profile_name = "1000Hz_0.0010ramp 0.0010delay.txt"
-        f= open(v_profile_name, "r")
         self.radiantnopoints = int(f.readline()[:-1]) #first line describes how many points there are.
         self.radianttimedelay = float(f.readline()[:-1]) #second line describes time delay in ms
         self.radiantvoltages = np.zeros(self.radiantnopoints)
         for x in range(self.radiantnopoints):
             self.radiantvoltages[x] = float(f.readline()[:-1])
         f.close()
-        print('-----voltage profile ' + v_profile_name + ' successfully uploaded-----')
         
 
 
@@ -491,7 +586,7 @@ if __name__ == '__main__':
     #working directory should now be C:\\Users\\<name>\\Documents    
     gui_activeDatafile = activeDatafile.get_qt_ui()
     gui_activeDatafile.show()
-    
+    print(activeDatafile.keys())
     experiment = Lab3_experiment(activeDatafile)
     experiment.show_gui()
     print('Done')

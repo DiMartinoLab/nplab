@@ -12,19 +12,14 @@ import nplab
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtCore import QTimer, QTime, Qt, QRunnable, QThreadPool
 import sys
-#import os
 import numpy as np
-#import matplotlib.pyplot as plt
-#import matplotlib.colors as colors
+import os
 from nplab.utils.gui import QtCore, QtGui, uic, get_qt_app, show_widget
 from nplab.ui.ui_tools import UiTools
-#import ctypes
-#from ctypes import byref, c_int, c_ulong, c_double
-#import pyqtgraph as pg
-#from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-#from matplotlib.figure import Figure
 from nplab.instrument.mercuryUSB.mercuryUSB import temperatureController as MiC_package
 import time
+from datetime import datetime
+
 
 #import curve to be used when using reflective metal as reference material rather than white scatterer
 ratio_curve_points = np.genfromtxt(fname='ratio_curve.txt')
@@ -67,9 +62,10 @@ class MercuryController(QtWidgets.QWidget, UiTools):
     #inherit QWidget methods
     def __init__(self, MiTC_handle = False,  ui_file = 'MercuryController.ui',   parent=None):
         
-        # set objects for spectrometer and stage
+#        # set objects for spectrometer and stage
 #        self.MiTC_handle = MiTC_handle
-        self.MiTC_handle = MiC_package('COM5')
+        print('Mercury controller widget has been requested')
+        self.MiTC_handle = MiC_package('COM8')
         
         # define devices of MiTC and MiPS.
         # For more information, open "mercurytest.py" in
@@ -78,9 +74,45 @@ class MercuryController(QtWidgets.QWidget, UiTools):
         # make this window available for the main program
         super(MercuryController, self).__init__() 
         uic.loadUi(ui_file, self)
+        """ """
+        now = datetime.now()
+        current_date = now.strftime("%y%m%d")
         
-        self.folder = 'C:/Users/Lab Di Martino/Documents/data/xtn20/221130/'
-        self.file_name = 'Cooldown_3' + '_TSMH.txt'
+        
+        self.folder2save = os.path.join('C:\\Users\\Lab Di Martino\\Documents\\data\\xtn20')
+        
+        folders = []
+        for root, dirs, files in os.walk(self.folder2save):
+        
+            for folder in dirs:
+                if folder.startswith(current_date):
+                    folders.append(folder)
+        if not os.path.exists(self.folder2save + '\\' + str(folders[0])):
+            os.makedirs(self.folder2save + '\\' + str(folders[0]))
+            
+        path2save = os.path.join(self.folder2save + '\\' + str(folders[0]) + '\\Cooldown')
+        if not os.path.exists(path2save):
+            os.makedirs(path2save)
+            
+        """ """
+        self.folder = path2save
+        """ """
+         # Save as increment file name
+        i = 0
+        
+        fullfile = path2save + '\\Templog_TSMH'
+        if os.path.exists(fullfile + '.txt'):
+            while os.path.exists(fullfile + '_' + str(i) + '.txt'):
+                print('file found')
+                i = i + 1
+            print(i)
+            outputfile = fullfile + '_' + str(i) + '.txt'
+        else:
+            outputfile = fullfile + '.txt'
+            
+       
+        """ """
+        self.file_name = outputfile
         self.cTime_value = []
         self.Time_count = []
         self.cSampleTemp_value = []
@@ -90,8 +122,12 @@ class MercuryController(QtWidgets.QWidget, UiTools):
         self.Start_button.clicked.connect(self.startTimer)
         self.threadCount = QThreadPool.globalInstance().maxThreadCount()
         self.pool = QThreadPool.globalInstance()
+        
+        self.test_button.clicked.connect(self.test_function)
 
-
+    def test_function(self):
+        self.MiTC_handle.setSampleTemp('Sample', 10)
+        
     def startTimer(self):
         print('Start logging')
         self.temperatureUpdate()
@@ -125,7 +161,7 @@ class MercuryController(QtWidgets.QWidget, UiTools):
         self.plotTemp()
         savestr = str(read_temp.cTime_value) + '\t' + str(read_temp.cSampleTemp_value) \
             + '\t' + str(read_temp.cMagnetTemp_value)  + '\t' + str(read_temp.cHTSTemp_value) + '\n'
-        with open(self.folder + self.file_name, 'a') as the_file:
+        with open(self.file_name, 'a') as the_file:
             the_file.write(savestr)
         
     def plotTemp(self):
@@ -138,14 +174,33 @@ class MercuryController(QtWidgets.QWidget, UiTools):
         self.Temp_Fig.canvas.ax.set_xlabel('Time (m)')
         self.Temp_Fig.canvas.ax.tick_params(axis = "y", direction = "in", left = True, right = False)
         
+        minY = min(float(self.Rate1.value()), float(self.Rate2.value()))
+        maxY = max(float(self.Rate1.value()), float(self.Rate2.value()))
+        if minY<maxY:
+            self.Temp_Fig.canvas.ax.set_ylim([minY, maxY])
         
+        minX = min(float(self.Time1.value()), float(self.Time2.value()))
+        maxX = max(float(self.Time1.value()), float(self.Time2.value()))
+        if minX<maxX:
+            self.Temp_Fig.canvas.ax.set_xlim([minX, maxX])
         
         p2 = self.Temp_Fig.canvas.ax2.plot(np.array(self.Time_count), np.array(self.cMagnetTemp_value), 'b')
+        self.Temp_Fig.canvas.ax2.plot(np.array(self.Time_count), np.array(self.cSampleTemp_value), 'b+')
+        self.Temp_Fig.canvas.ax2.plot(np.array(self.Time_count), np.array(self.cHTSTemp_value), 'bo')
         self.Temp_Fig.canvas.ax2.set_ylabel('Temperature (K/m)', color = p2[0].get_color())
         self.Temp_Fig.canvas.fig.tight_layout()
         self.Temp_Fig.canvas.ax2.tick_params(axis = "y", direction = "in", left = False, right = True)
-        self.Temp_Fig.canvas.ax2.set_ylim([min(np.array(self.cMagnetTemp_value)) - 3, max(np.array(self.cMagnetTemp_value)) + 3])
+        if minX<maxX:
+            self.Temp_Fig.canvas.ax2.set_xlim([minX, maxX])
+            
+        minY = min(float(self.Temp1.value()), float(self.Temp2.value()))
+        maxY = max(float(self.Temp1.value()), float(self.Temp2.value()))
+        if minY<maxY:
+            self.Temp_Fig.canvas.ax2.set_ylim([minY, maxY])
+        else:
+            self.Temp_Fig.canvas.ax2.set_ylim([min(np.array(self.cMagnetTemp_value)) - 3, max(np.array(self.cMagnetTemp_value)) + 3])
         self.Temp_Fig.canvas.draw()
+        
         
     
 #    def make_window(self):

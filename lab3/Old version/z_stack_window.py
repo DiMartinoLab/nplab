@@ -85,12 +85,13 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
 
         
         """connect control and readout buttons for spectrometer temperature & spectrometer integration time """
-        self.set_tec_temperature_pushButton.clicked.connect(self.gui_set_tec_temperature)
+#        self.set_tec_temperature_pushButton.clicked.connect(self.gui_set_tec_temperature)
         self.read_tec_temperature_pushButton.clicked.connect(self.gui_read_tec_tempeature)
-        initial_temperature = np.round(self.OOspectrometer.get_tec_temperature(), decimals = 1)
-        self.tec_temperature_lcdNumber.display(float(initial_temperature))
-        self.set_tec_temperature_LineEdit.setText(str(initial_temperature))
+#        initial_temperature = np.round(self.OOspectrometer.get_tec_temperature(), decimals = 1)
+#        self.tec_temperature_lcdNumber.display(float(initial_temperature))
+#        self.set_tec_temperature_LineEdit.setText(str(initial_temperature))
         self.set_integration_time_push_button.clicked.connect(self.gui_set_integration_time)
+        self.OOspectrometer.tec_temperature = float(-20)
         
         """setup spectrometer commands """
         self.wl_in_nm = self.OOspectrometer.get_wavelengths()
@@ -118,22 +119,22 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
     
         self.OO_disconnect_button.clicked.connect(self.OO_disconnect)
         
-        """setup display for spectrum plot """
-        self.plotbox = QtWidgets.QGroupBox()
-        self.plotbox.setLayout(QtWidgets.QGridLayout())
-        self.plotlayout = self.plotbox.layout()     
-        self.spec_plot = pg.PlotWidget(labels = {'bottom':'Wavelength (nm)'})
-        self.plotlayout.addWidget(self.spec_plot)
-        self.figure_widget = self.replace_widget(self.display_layout, self.figure_widget, self.plotbox) 
-        
-        """setup z-stack controls and display """
+#        """setup display for spectrum plot """
+#        self.plotbox = QtWidgets.QGroupBox()
+#        self.plotbox.setLayout(QtWidgets.QGridLayout())
+#        self.plotlayout = self.plotbox.layout()     
+#        self.spec_plot = pg.PlotWidget(labels = {'bottom':'Wavelength (nm)'})
+#        self.plotlayout.addWidget(self.spec_plot)
+#        self.figure_widget = self.replace_widget(self.display_layout, self.figure_widget, self.plotbox) 
+#        
+#        """setup z-stack controls and display """
         self.take_z_stack_button.clicked.connect(self.z_stack_method)
-        self.plotbox_stack  = QtWidgets.QGroupBox()
-        self.plotbox_stack.setLayout(QtWidgets.QGridLayout())
-        self.plotlayout_stack  = self.plotbox_stack.layout()     
-        self.stack_plot=pg.PlotWidget(labels = {'bottom':'Wavelength (nm)'})
-        self.plotlayout_stack .addWidget(self.stack_plot)
-        self.figure_widget_stack = self.replace_widget(self.display_layout, self.figure_widget_stack, self.plotbox_stack ) 
+#        self.plotbox_stack  = QtWidgets.QGroupBox()
+#        self.plotbox_stack.setLayout(QtWidgets.QGridLayout())
+#        self.plotlayout_stack  = self.plotbox_stack.layout()     
+#        self.stack_plot=pg.PlotWidget(labels = {'bottom':'Wavelength (nm)'})
+#        self.plotlayout_stack .addWidget(self.stack_plot)
+#        self.figure_widget_stack = self.replace_widget(self.display_layout, self.figure_widget_stack, self.plotbox_stack ) 
         
         """setup stage controls and display - using olympus OR smaract"""
         self.disconnect_stage_button.clicked.connect(self.disconnect_stage)
@@ -141,10 +142,9 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         # dmk50 April 2023
         
         #buttons and display for z setpoint
-        self.Set_New_z_setpoint_button.clicked.connect(self.Set_New_z_setpoint)
-        self.current_z_setpoint = 0
-        self.Go_To_z_setpoint_button.clicked.connect(self.Go_To_z_setpoint)
-        self.Current_z_setpoint_display.display(float(self.current_z_setpoint))
+        self.Set_New_Coord_origin_button.clicked.connect(self.Set_New_Origin)
+        self.Go_To_Stage_Origin_button.clicked.connect(self.Go_To_Stage_Origin)
+        self.origin_stored_checkbox.setChecked(False)
             
         if stage_enabled == 'Olympus stage':
             global stage_in_use
@@ -260,6 +260,9 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
             # Movement of stage on cryostat may differ from movement on camera view
             # Use stage feature button to change view - and display view name
             self.stage_feature_button.clicked.connect(self.current_view)
+            
+            #setup button to print stage position 
+            self.get_stage_position_button.clicked.connect(self.print_stage_positions)
         
         
         # Mercury iTC and iPS-M
@@ -426,8 +429,26 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         while OO_spectrometer_in_use == True:
             pass
         if OO_spectrometer_in_use == False:
-            self.spec_plot.clear()
-            self.spec_plot.plot(self.wl_in_nm, self.current_processed_spec)
+            self.Spectra_display.canvas.ax.cla()
+            p = self.Spectra_display.canvas.ax.plot(self.wl_in_nm, self.current_processed_spec)
+            self.Spectra_display.canvas.ax.set_ylabel('DF signal', fontsize = 16)
+            self.Spectra_display.canvas.ax.set_xlabel('Wavelength (nm)', fontsize = 16)
+            self.Spectra_display.canvas.ax.tick_params(axis = "y", direction = "in")
+            self.Spectra_display.canvas.ax.tick_params(axis = "x", direction = "in", top = False)
+            
+            minY = min(float(self.YLim1_box.value()), float(self.YLim2_box.value()))
+            maxY = max(float(self.YLim1_box.value()), float(self.YLim2_box.value()))
+            if minY == maxY:
+                minY = min(self.current_processed_spec)
+                maxY = max(self.current_processed_spec)
+                
+            self.Spectra_display.canvas.ax.set_ylim([minY, maxY])
+            minX = min(float(self.XLim1_box.value()), float(self.XLim2_box.value()))
+            maxX = max(float(self.XLim1_box.value()), float(self.XLim2_box.value()))
+            self.Spectra_display.canvas.ax.set_xlim([minX, maxX])
+            self.Spectra_display.canvas.draw()
+#            self.spec_plot.clear()
+#            self.spec_plot.plot(self.wl_in_nm, self.current_processed_spec)
             print('single spec display has been updated')
         
     
@@ -465,8 +486,8 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
         return processed_spectrum 
 
     """connect spectrometer control and readout buttons"""
-    def gui_set_tec_temperature(self):
-        self.OOspectrometer.tec_temperature = float(self.set_tec_temperature_LineEdit.text().strip())
+#    def gui_set_tec_temperature(self):
+#        self.OOspectrometer.tec_temperature = float(self.set_tec_temperature_LineEdit.text().strip())
         
     def gui_read_tec_tempeature(self):
         self.tec_temperature_lcdNumber.display(float(self.OOspectrometer.tec_temperature)) 
@@ -581,7 +602,9 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
             
     """START: methods for z-stacks using OO spectrometer"""
     def z_stack_method(self):
-        self.stack_plot.clear()
+        self.Spectra_display.canvas.ax.cla()
+#        self.stack_plot.clear()
+        
         self.stack_step_size = int(self.zstep_box_2.value())
         self.stack_num_steps = int(self.num_steps_box.value())
         self.stack_z_values= []
@@ -619,7 +642,24 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
                 #save information gathered on this z_increment
                 self.processed_stack_spectra = self.processed_stack_spectra + [self.current_processed_spec]
                 self.raw_stack_spectra = self.raw_stack_spectra + [self.current_raw_spec]
-                self.stack_plot.plot(self.wl_in_nm, self.current_processed_spec)
+                p = self.SpectraStack_display.canvas.ax.plot(self.wl_in_nm, self.current_processed_spec)
+                self.SpectraStack_display.canvas.ax.set_ylabel('DF signal', fontsize = 16)
+                self.SpectraStack_display.canvas.ax.set_xlabel('Wavelength (nm)', fontsize = 16)
+                self.SpectraStack_display.canvas.ax.tick_params(axis = "y", direction = "in")
+                self.SpectraStack_display.canvas.ax.tick_params(axis = "x", direction = "in", top = False)
+                
+                minY = min(float(self.YLim1_box.value()), float(self.YLim2_box.value()))
+                maxY = max(float(self.YLim1_box.value()), float(self.YLim2_box.value()))
+                if minY == maxY:
+                    minY = min(self.current_processed_spec)
+                    maxY = max(self.current_processed_spec)
+                    
+                self.SpectraStack_display.canvas.ax.set_ylim([minY, maxY])
+                minX = min(float(self.XLim1_box.value()), float(self.XLim2_box.value()))
+                maxX = max(float(self.XLim1_box.value()), float(self.XLim2_box.value()))
+                self.SpectraStack_display.canvas.ax.set_xlim([minX, maxX])
+                self.SpectraStack_display.canvas.draw()
+#                self.stack_plot.plot(self.wl_in_nm, self.current_processed_spec)
                 
                 #increment step counter
                 step_num = step_num+1
@@ -681,19 +721,53 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
             self.SMC_stage.__del__()
             print('Olympus stage disconnected.')
             
-    def Set_New_z_setpoint(self):
-        #this will take current z co-ordinate and save it as self.current_z_setpoint 
+    def Set_New_Origin(self):
+        #this will take current coordinates of the three smaracts and save them as 'origin' - note that correct frame of reference must be used
         if self.stage_enabled == 'Cryostat stage':
+            print(' Saving coords as origin - check frame of reference is use is the desired one.')
             z_position = smaract_package.GetProperty_i64(self.Smaract_stage, 1, smaract_package.Property.POSITION)
-        elif self.stage_enabled == 'Olympus stage':
-            z_position = self.SMC_stage.get_position(3)
-        self.current_z_setpoint = z_position[0]
-        self.Current_z_setpoint_display.display(float(self.current_z_setpoint))
+            left_right_position = smaract_package.GetProperty_i64(self.Smaract_stage, self.smaract_channel_left, smaract_package.Property.POSITION)
+            up_down_position = smaract_package.GetProperty_i64(self.Smaract_stage, self.smaract_channel_up, smaract_package.Property.POSITION)
+            
+            self.chosen_coord_origin={}
+            self.chosen_coord_origin['z_position']          = z_position
+            self.chosen_coord_origin['left_right_position'] = left_right_position
+            self.chosen_coord_origin['up_down_position']    = up_down_position
+            
+            print('origin coords stored as:')
+            print('left/right axis = '+ str(self.chosen_coord_origin['z_position']/10**(6))         +' um.' )
+            print('up/down axis    = '+ str(self.chosen_coord_origin['left_right_position']/10**(6))+' um.' )
+            print('z-axis          = '+ str(self.chosen_coord_origin['up_down_position']/10**(6))   +' um.' )
+            print('   -   -   -  ')
+            
+            self.origin_stored_checkbox.setChecked(True)
         
-    def Go_To_z_setpoint(self):
-        if self.stage_enabled == 'Cryostat stage':
-            print('setpoint not yet impletmented for cryostat stage')
         elif self.stage_enabled == 'Olympus stage':
+            print('origin not yet implemented for SMC100')
+            z_position = self.SMC_stage.get_position(3)
+            z_position = z_position[0]
+
+        
+    def Go_To_Stage_Origin(self):
+        if self.stage_enabled == 'Cryostat stage':
+            
+            print('moving to origin cryostat stage - backlash calibration needed?')
+            
+            z_position = smaract_package.GetProperty_i64(self.Smaract_stage, 1, smaract_package.Property.POSITION)
+            left_right_position = smaract_package.GetProperty_i64(self.Smaract_stage, self.smaract_channel_left, smaract_package.Property.POSITION)
+            up_down_position = smaract_package.GetProperty_i64(self.Smaract_stage, self.smaract_channel_up, smaract_package.Property.POSITION)
+
+            required_z_steps   = int( (self.chosen_coord_origin['z_position']/10**(6))          - ( z_position/10**(6) ) )
+            required_l_r_steps = int( (self.chosen_coord_origin['left_right_position']/10**(6)) - ( left_right_position /10**(6) ) )
+            required_u_d_steps = int( (self.chosen_coord_origin['up_down_position']/10**(6))    - ( up_down_position/10**(6) ) )
+ 
+            self.smaract_move(channel=self.smaract_channel_left, move_value = required_l_r_steps)
+            self.smaract_move(channel=1,                         move_value = required_z_steps)            
+            self.smaract_move(channel=self.smaract_channel_up,   move_value = required_u_d_steps)
+            print(' ')
+            
+        elif self.stage_enabled == 'Olympus stage':
+            print('origin not yet implemented for SMC100')
             self.SMC_stage.move(self.current_z_setpoint, '3', relative=False)
             print('SMC stage returned to z-axis setpoint')
             print('Position axis 3: ' + str(self.current_z_setpoint) + ' mm')
@@ -882,10 +956,13 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
             self.pool.start(do_move)
         
     def SMC100_move_mid(self):
-        do_move_mid = sub_SMC100_move_mid(self.SMC_stage)
-        global stage_in_use
-        stage_in_use =True
-        self.pool.start(do_move_mid)
+        if self.stage_enabled == 'Cryostat stage':
+            print("no 'go to midpoint' function defined for cryostat stage")
+        elif self.stage_enabled == 'Olympus stage':
+            do_move_mid = sub_SMC100_move_mid(self.SMC_stage)
+            global stage_in_use
+            stage_in_use =True
+            self.pool.start(do_move_mid)
         
     def print_stage_positions(self):
         #note - cryostat stage case is untested
@@ -895,10 +972,22 @@ class z_stack_window_object(Experiment, QtWidgets.QWidget, UiTools):
             z_position = smaract_package.GetProperty_i64(self.Smaract_stage, 1, smaract_package.Property.POSITION)
             left_right_position = smaract_package.GetProperty_i64(self.Smaract_stage, self.smaract_channel_left, smaract_package.Property.POSITION)
             up_down_position = smaract_package.GetProperty_i64(self.Smaract_stage, self.smaract_channel_up, smaract_package.Property.POSITION)
+            self.z_pos_display.display(float(z_position/10**(6)))
+            self.lr_pos_display.display(float(left_right_position/10**(6)))
+            self.ud_pos_display.display(float(up_down_position/10**(6)))
+            # 500000 units on smaract axis = 500nm
+            # 1000 units on smaract axis = 1nm
+            # axis/1000 = nm = 10^-3 um
+            # 1nm
+            
+            button_text = self.stage_feature_button.text()
+            
+            
             print('     - - - - -     ')
-            print('left/right axis = '+str(left_right_position)+' (moves in ?nm increments)')
-            print('up/down axis = '+str(up_down_position)+' (moves in ?nm increments)')
-            print('z-axis = '+str(z_position)+' (moves in ?nm increments)')
+            print(button_text)
+            print('left/right axis = '+str(left_right_position/10**(6))+' um (moves in ?nm increments)')
+            print('up/down axis    = '+str(up_down_position/10**(6))+' um (moves in ?nm increments)')
+            print('z-axis          ='+str(z_position/10**(6))+' um (moves in ?nm increments)')
             print('     - - - - -     ')
             
         elif self.stage_enabled == 'Olympus stage':
@@ -980,6 +1069,8 @@ class sub_take_spec(QRunnable):
         self.OOspectrometer = OOspectrometer
     
     def run(self):
+        #TEMPORARY PATCH 26TH APRIL - READ SPECTRUM TWICE, SO THAT ANY CHANGES JUST BEFORE 'TAKE SPECTRUM' WAS CLICKED DONT EFFECT SPECTRUM COLLECTED
+        self.current_spec = self.OOspectrometer.read_spectrum()
         self.current_spec = self.OOspectrometer.read_spectrum()
         global OO_spectrometer_in_use 
         OO_spectrometer_in_use = False
@@ -1032,7 +1123,7 @@ class sub_initialise_stage(QRunnable):
         print(' ')
         print('Wait for stage initialisation...')
         self.SMC100.reset_and_configure()
-        self.SMC100.home()
+        #        self.SMC100.home()
         global stage_in_use
         stage_in_use =False
         print(' ')
@@ -1130,7 +1221,7 @@ class sub_set_sample_temp(QRunnable):
         # block the communication
         MiTC_communication = 1
         # set temperature here
-        """not yet doneeeeeeee"""
+        self.MiTC_handle.setSampleTemp('Sample', self.setSampleTemp)
         # free the communication
         MiTC_communication = 0
         
@@ -1150,18 +1241,18 @@ class sub_heater_MiPS(QRunnable):
          MiPS_communication = 1
          # read current state of heater
          print('Not yet functional')
-#         if str(self.MiPS_handle.getMiPSHeater) == 'OFF':
-#             self.MiPS_handle.setMiPSHeater(self.MiPS_handle.devices['Magnet'], 'ON')
-#             # free the communication
-#             MiPS_communication = 0
-#             self.MiPSHeater_button.setText('Heater ... on')
-#             time.sleep(30)
-#             self.MiPSHeater_button.setText('Heater ON')
-#         elif str(self.MiPS_handle.getMiPSHeater) == 'ON':
-#             self.MiPS_handle.setMiPSHeater(self.MiPS_handle.devices['Magnet'], 'OFF')
-#             # free the communication
-#             MiPS_communication = 0
-#             self.MiPSHeater_button.setText('Heater ON')
+         if str(self.MiPS_handle.getMiPSHeater) == 'OFF':
+             self.MiPS_handle.setMiPSHeater('Magnet', 'ON')
+             # free the communication
+             MiPS_communication = 0
+             self.MiPSHeater_button.setText('Heater ... on')
+             time.sleep(30)
+             self.MiPSHeater_button.setText('Heater ON')
+         elif str(self.MiPS_handle.getMiPSHeater) == 'ON':
+             self.MiPS_handle.setMiPSHeater('Magnet', 'OFF')
+             # free the communication
+             MiPS_communication = 0
+             self.MiPSHeater_button.setText('Heater ON')
          MiPS_communication = 0
 """end: helper classes for solenoid temperature controller"""               
          

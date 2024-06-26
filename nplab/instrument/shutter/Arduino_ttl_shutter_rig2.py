@@ -10,9 +10,9 @@ import serial
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.ui.ui_tools import *
 from nplab.utils.gui import *
-
-class Arduino_TTL_shutter(SerialInstrument,Shutter):
-    '''A class for the Piezoconcept objective collar '''
+        
+class Arduino_tri_shutter(SerialInstrument):
+    '''Control class for tri shutter '''
 
     def __init__(self, port=None):
         '''Set up baudrate etc and recenters the stage to the center of it's range (50um)
@@ -28,37 +28,9 @@ class Arduino_TTL_shutter(SerialInstrument,Shutter):
              #       'bytesize':serial.EIGHTBITS,
                     'timeout':2, #wait at most one second for a response
                     }
-        self.termination_character = '\n'
-        SerialInstrument.__init__(self,port=port)
-        Shutter.__init__(self)
-    def get_state(self):
-        return self.query('Read')
-    def set_state(self,state):
-        self.query(state)
-  #      self.get_state()
-#if __name__ == '__main__':
-#    shutter = Arduino_TTL_shutter(port = 'COM15')
-
-        
-class Arduino_tri_shutter(SerialInstrument):
-    '''Control class for tri shutter '''
-
-    def __init__(self, port = None):
-        '''Set up baudrate etc and recenters the stage to the center of it's range (50um)
-        
-        Args:
-            port(int/str):  The port the device is connected 
-                            to in any of the accepted serial formats
-            
-        '''
-        self.termination_character = '\n'
-        self.port_settings = {
-                    'baudrate':9600,
-             #       'bytesize':serial.EIGHTBITS,
-                    'timeout':2, #wait at most one second for a response
-                    }
         self.termination_character = '\r\n'
         SerialInstrument.__init__(self,port=port)
+        
     def set_shutter_1_state(self,state):
         """Set State Command for Shutter 1 used by check box """
         if state == True:
@@ -125,9 +97,7 @@ class Arduino_tri_shutter(SerialInstrument):
  #       return self.query('Read')
  #   def set_state(self,state):
  #       self.query(state)
-    def get_qt_ui(self):
-        self.ui = tri_shutter_ui(self)
-        return self.ui
+
     def read_state(self):
         states = self.query('S')
         states = states.split(',')
@@ -150,25 +120,15 @@ class Arduino_tri_shutter(SerialInstrument):
 
     #      self.get_state()
   
-class tri_shutter_ui(QuickControlBox):
-    '''Control Widget for the Shamrock spectrometer
-    '''
-    def __init__(self,shutter):
-        super(tri_shutter_ui,self).__init__(title = 'Tri_shutter')
-        self.shutter = shutter
-        self.add_checkbox('Shutter_1_State_2', title = 'Shutter 1')
-        self.add_checkbox('Shutter_2_State_2', title = 'Shutter_2')
-        self.add_checkbox('Flipper_1_State', title = 'Mirror 1')
-        self.auto_connect_by_name(controlled_object = self.shutter)
 
-if __name__ == '__main__':
-    shutter = Arduino_tri_shutter(port = 'COM4')
-    import time 
-    time.sleep(5)
-    shutter.show_gui()
-    self.add_checkbox('Shutter_1_State')
-    self.add_checkbox('Shutter_2_State')
-    self.add_checkbox('Flipper_1_State')
-    self.auto_connect_by_name(controlled_object = self.shutter)
+#if __name__ == '__main__':
+#    shutter = Arduino_tri_shutter(port = 'COM4')
+#    import time 
+#    time.sleep(5)
+#    shutter.show_gui()
+#    self.add_checkbox('Shutter_1_State')
+#    self.add_checkbox('Shutter_2_State')
+#    self.add_checkbox('Flipper_1_State')
+#    self.auto_connect_by_name(controlled_object = self.shutter)
     
     

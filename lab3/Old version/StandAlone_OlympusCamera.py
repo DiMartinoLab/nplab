@@ -93,10 +93,6 @@ class LiveCapture(QRunnable):
             self.CameraView.canvas.fig.colorbar(p, cax=self.cax)
             self.CameraView.canvas.draw()
 
-
-
-        
-        
         
         print('Successfully stop')
     

@@ -74,6 +74,10 @@ class temperatureController(object):
     def getTemp(self, device):
         ans = str(self.readValue(self.devices[device] + ":SIG:TEMP")).split(":")[-1]
         return float(ans[0:len(ans)-2])
+    
+    def setSampleTemp(self, device, values):
+        str(self.setValue(self.devices[device] + ":LOOP:TSET:" + str(values))).split(":")[-1]
+
 
     def getField(self, device):
         ans = str(self.readValue(self.devices[device] + ":SIG:FLD")).split(":")[-1]

@@ -16,7 +16,6 @@ class Kandor(Andor):
                  pixel_width=26,
                  use_shifts=False, 
                  laser_wl=632.8,
-                 
                  white_shutter=None):
         
         super().__init__()

@@ -275,7 +275,8 @@ class Kymera(Instrument):
         ccalib_array = ccalib()
         error = self.dll.ATSpectrographGetCalibration(self.current_kymera, pointer(ccalib_array), self.pixel_number)
         self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
-        calib = []        
+        calib = []
+#        print('Show something')
         for i in range(len(ccalib_array)):
             calib.append(ccalib_array[i])
         return calib[:]

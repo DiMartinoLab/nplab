@@ -87,17 +87,19 @@ class SMC100_window_object(QtWidgets.QWidget, UiTools):
         uic.loadUi(ui_file, self)
         """ use this line for lab3 experiment"""    
         self.SMC100 = SMC100_instance
-        """ use this line for running SMC100 only"""
+#        """ use this line for running SMC100 only"""
 #        self.SMC100 = SMC100('COM1', (1,2,3))
         
         self.InitialiseButton.clicked.connect(self.initialise_stage)
         self.DisconnectButton.clicked.connect(self.disconnect_stage)
+        self.DisconnectButton.setEnabled(False)
         
         self.stage_mup_button.clicked.connect(self.SM100_move_up)
         self.stage_mdown_button.clicked.connect(self.SM100_move_down)
         self.stage_mleft_button.clicked.connect(self.SM100_move_left)
         self.stage_mright_button.clicked.connect(self.SM100_move_right)
         
+        self.stage_release_button.clicked.connect(self.stage_release)
         self.stage_mtoward_button.clicked.connect(self.SM100_move_towardsample)
         self.stage_maway_button.clicked.connect(self.SM100_move_awaysample)
         
@@ -114,7 +116,10 @@ class SMC100_window_object(QtWidgets.QWidget, UiTools):
 
         do_initialise = sub_initialise_stage(self.SMC100)
         self.pool.start(do_initialise)
-
+        self.InitialiseButton.setEnabled(False)
+    def stage_release(self):
+        global stage_in_use
+        stage_in_use = 0
     def disconnect_stage(self):
         self.SMC100.__del__()
         print('Stage disconnected. Power-off then -on for reconnection.')
@@ -172,9 +177,15 @@ class SMC100_window_object(QtWidgets.QWidget, UiTools):
         self.pool.start(do_move_mid)
         
     def AskPosition(self):
-        print(self.SMC100.get_position(1))
-        print(self.SMC100.get_position(2))
-        print(self.SMC100.get_position(3))
+#        print(self.SMC100.get_position(1))
+#        print(self.SMC100.get_position(2))
+#        print(self.SMC100.get_position(3))
+        str1 = ''.join(str(x) for x in self.SMC100.get_position(1))
+        self.X_position.setText('X: ' + str1 + ' mm')
+        str1 = ''.join(str(x) for x in self.SMC100.get_position(2))
+        self.Y_position.setText('Y: ' + str1 + ' mm')
+        str1 = ''.join(str(x) for x in self.SMC100.get_position(3))
+        self.Z_position.setText('Z: ' + str1 + ' mm')
     
     def make_window(self):
         app = get_qt_app()
@@ -188,7 +199,7 @@ class sub_initialise_stage(QRunnable):
         self.SMC100 = SMC100
 
     def run(self):
-        self.SMC100.reset_and_configure()
+#        self.SMC100.reset_and_configure()
         self.SMC100.home()
         print('Stage initialised successful')
         print(self.SMC100.get_position(1))
@@ -240,7 +251,7 @@ class sub_SM100_move_mid(QRunnable):
         print('Stage all axes moved to position 6 mm')
         stage_in_use = 0
         
-""" For running GUI alone"""
+#""" For running GUI alone"""
 #app = QtWidgets.QApplication(sys.argv)
 #main = SMC100_window_object()
 #main.show()

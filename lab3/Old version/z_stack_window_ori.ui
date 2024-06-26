@@ -6,12 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1202</width>
-    <height>936</height>
+    <width>1334</width>
+    <height>783</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: rgb(158, 158, 158);</string>
   </property>
   <widget class="QGroupBox" name="Spectrometer_Group">
    <property name="geometry">
@@ -547,7 +550,7 @@
        </sizepolicy>
       </property>
       <property name="title">
-       <string>Z stack Setpoint</string>
+       <string>Origin of stage coordinates</string>
       </property>
       <widget class="QWidget" name="figure_widget_stack_2" native="true">
        <property name="geometry">
@@ -576,32 +579,23 @@
        </property>
        <layout class="QGridLayout" name="gridLayout_9">
         <item row="1" column="0">
-         <widget class="QPushButton" name="Go_To_z_setpoint_button">
+         <widget class="QPushButton" name="Set_New_Coord_origin_button">
           <property name="text">
-           <string>Go To </string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QPushButton" name="Set_New_z_setpoint_button">
-          <property name="text">
-           <string>Set New</string>
+           <string>Set New Zero</string>
           </property>
          </widget>
         </item>
         <item row="2" column="0">
-         <widget class="QLCDNumber" name="Current_z_setpoint_display">
-          <property name="frameShape">
-           <enum>QFrame::WinPanel</enum>
+         <widget class="QPushButton" name="Go_To_Stage_Origin_button">
+          <property name="text">
+           <string>Go To  Zero</string>
           </property>
-          <property name="frameShadow">
-           <enum>QFrame::Plain</enum>
-          </property>
-          <property name="digitCount">
-           <number>7</number>
-          </property>
-          <property name="segmentStyle">
-           <enum>QLCDNumber::Flat</enum>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="origin_stored_checkbox">
+          <property name="text">
+           <string>Origin Coords Stored</string>
           </property>
          </widget>
         </item>
@@ -621,7 +615,7 @@
       <item>
        <widget class="QSpinBox" name="zstep_box">
         <property name="maximum">
-         <number>500</number>
+         <number>99999999</number>
         </property>
         <property name="value">
          <number>1</number>
@@ -659,7 +653,7 @@
       <item row="2" column="2">
        <widget class="QSpinBox" name="xystep_Box">
         <property name="maximum">
-         <number>500</number>
+         <number>9999999</number>
         </property>
         <property name="value">
          <number>1</number>
@@ -689,6 +683,9 @@
       </item>
       <item row="4" column="3">
        <widget class="QPushButton" name="disconnect_stage_button">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
          <string>Disconnect</string>
         </property>
@@ -831,7 +828,7 @@
      <rect>
       <x>0</x>
       <y>10</y>
-      <width>401</width>
+      <width>402</width>
       <height>81</height>
      </rect>
     </property>
@@ -844,7 +841,11 @@
       </widget>
      </item>
      <item row="2" column="1">
-      <widget class="QDoubleSpinBox" name="setMagnetSetPoint_box"/>
+      <widget class="QDoubleSpinBox" name="setMagnetSetPoint_box">
+       <property name="minimum">
+        <double>-99.000000000000000</double>
+       </property>
+      </widget>
      </item>
      <item row="2" column="4">
       <widget class="QPushButton" name="MagnetToZero_button">

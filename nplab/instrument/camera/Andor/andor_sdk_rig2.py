@@ -17,7 +17,9 @@ from ctypes import *
 import numpy as np
 import tempfile
 import shutil
-from nplab.instrument.camera import CameraParameter
+#from nplab.instrument.camera import CameraParameter
+# xtn20 14,09.2023
+from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
 
 LOGGER = create_logger('Andor SDK')
 TEMPORARY_PREFIX = '_andortemporary'
@@ -58,6 +60,34 @@ class AndorWarning(Warning):
 
     def __str__(self):
         return self.error_name + '\n Error sent: ' + self.msg + '\n Error reply: ' + self.reply
+
+# xtn20 14.09.2023 copied from nplab\instrument\camera\__init__.py but change
+# "get/set_camera_parameter" to get/set_andor_parameter".
+# Because camera_init calls Andor-class for get_camera_parameter, which in turns
+# calls the get_andor_parameter in THIS script.
+
+class CameraParameter(NotifiedProperty):
+ 
+
+    def __init__(self, parameter_name, doc=None, read_back=True):
+        """Create a property that reads and writes the given parameter.
+        
+        This internally uses the `get_camera_parameter` and 
+        `set_camera_parameter` methods, so make sure you override them.
+        """
+        if doc is None:
+            doc = "Adjust the camera parameter '{0}'".format(parameter_name)
+        super(CameraParameter, self).__init__(fget=self.fget, 
+                                                      fset=self.fset, 
+                                                      doc=doc,
+                                                      read_back=read_back)
+        self.parameter_name = parameter_name
+        
+    def fget(self, obj):
+        return obj.get_andor_parameter(self.parameter_name)
+            
+    def fset(self, obj, value):
+        obj.set_andor_parameter(self.parameter_name, value)
         
 
 class AndorParameter(CameraParameter):
